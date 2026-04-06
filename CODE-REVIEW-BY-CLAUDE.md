@@ -3,7 +3,7 @@
 **Date:** 2026-04-06
 **Reviewer:** Claude Sonnet 4.6
 **Scope:** Full system review + hardening pass
-**Status:** Changes listed below are committed to the repo (`fix(token-triangle)` commit). This document is a change log, not a spec — if the tree diverges from what's described here, the tree is authoritative.
+**Status:** This file is a **change log** (what was done in review), not a standalone spec. **The repo tree is authoritative** — if code or tests diverge from this document, trust the tree and update this file.
 
 ---
 
@@ -95,7 +95,12 @@ When the Broker couldn't find a requested token name in Script Properties, it ad
 ```
 `handlePost` forwards the `missing` array in the error response so callers can diagnose which names are unconfigured.
 
-**⚠️ Breaking change for "best-effort" consumers:** The old behavior allowed partial success — some tokens returned, some in `missing[]`, overall `ok: true`. Any existing caller that intentionally requested multiple names and handled partial results will now get `ok: false` and no tokens at all. If you have a consumer that wanted best-effort semantics, it needs to either: (a) request only names it knows exist, or (b) be updated to handle `ok: false` + inspect `missing[]` before giving up.
+**⚠️ Breaking change for "best-effort" consumers:** The old behavior allowed partial success — some tokens returned, some in `missing[]`, overall `ok: true`. Any existing caller that intentionally requested multiple names and handled partial results will now get `ok: false` and no tokens at all.
+
+**Two ways to adapt:**
+
+1. **Request only names you know are configured** — then you never hit the missing-name path.
+2. **Handle `ok: false`** — inspect `missing[]` and `error`; do not assume partial `tokens` when `ok` is false.
 
 ---
 
@@ -143,12 +148,12 @@ Both the Authenticator and Broker must be deployed and live. If either goes down
 
 ## Deploy Checklist After This Review
 
-> **Do not assume the system is hardened until steps 3 and 4 are complete.** The code supports the caller secret check but it only activates once the Script Property is set.
+> **⚠️ Operational warning:** **Unset `CALLER_SECRET` = `/issue` stays unauthenticated** (soft gate off). Do not treat “we haven’t set the property yet” as secure. **Do not assume the stack is hardened until steps 3–4 are done** — the code path exists, but enforcement only runs after Script Properties are set.
 
 - [ ] `clasp-cc push` → `clasp-cc version "harden: TTL + caller secret + rate limit"` → `clasp-cc deploy -i <deploymentId> -V <version>` on **Authenticator**
 - [ ] `clasp-cc push` → version + deploy on **Token Broker**
-- [ ] **Set `CALLER_SECRET=<shared-value>`** in Authenticator's Script Properties ← system is NOT hardened until this is done
-- [ ] **Set `CALLER_SECRET=<shared-value>`** in every consumer script's Script Properties ← same value as above
+- [ ] **`CALLER_SECRET` (required for hardening):** **Set `CALLER_SECRET=<shared-value>` in the Authenticator’s Script Properties** — until this is set, `/issue` remains open within your `DOMAIN` web app ACL
+- [ ] **`CALLER_SECRET` (consumers):** **Set the same `CALLER_SECRET=<shared-value>` in every consumer project’s Script Properties** — otherwise issue calls from `TokenClient` will fail once the Authenticator enforces the header
 - [ ] Delete `SetupTemp.js` from all three project `src/` folders if still present; remove from `filePushOrder` in each `.clasp.json`
 - [ ] Verify `runSample()` still works end-to-end after redeploy
 - [ ] If any existing consumer used best-effort token fetching (requested names it knew might be missing), update it to handle `ok: false` + inspect `missing[]`

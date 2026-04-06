@@ -1,0 +1,14 @@
+{
+  "name": "cc-token-triangle",
+  "private": true,
+  "description": "Unit tests for CC Token Triangle (GAS projects live in authenticator/, token-broker/, sample-caller/)",
+  "scripts": {
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test:integration": "node tests/integration.mjs",
+    "setup:urls": "node scripts/tt-setup-deploy-urls.mjs"
+  },
+  "devDependencies": {
+    "@mcpher/gas-fakes": "^2.3.4",
+    "jest": "^29.7.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "authenticatorScriptId": "1EKXuzhL3LZfveE2ROF9JlALWJt0y5U8ueMFudoknnkGN9yGunU8s_p_q",
+  "tokenBrokerScriptId": "1ipvbqj-PXfROuNN5Zv8MhQFctINFxdGz9FVDAnZxafl8iKKmoIy2XOul",
+  "sampleCallerScriptId": "1suO8k4wy2JriGaBwLSMMIbX67VQ5p3rzvMvVkKSA-U5bE9xJUJvKxYLW",
+  "authenticatorDeploymentId": "AKfycbz8cvUkmBXI8DHD9WYoXF7IqwpPKmu6R7VY5q4eT0Pkm4TCIIAN32V5hlo7sbj367Ha",
+  "tokenBrokerDeploymentId": "AKfycbwCiGIAr8FyCxtEVGVvt65S3zAp3_F0DKJUt-eMwUZKTOYkCq6ZQNPoYiOV1uHHR4jz3g",
+  "note": "Web app /exec URLs use https://script.google.com/macros/s/<deploymentId>/exec — update deployment IDs if you create new web app deployments."
+}
