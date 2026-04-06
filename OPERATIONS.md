@@ -215,7 +215,7 @@ Secrets and URLs are **not** stored in git. For each Apps Script project, open *
 | `SMOKE_DEBUG_AUTH_API_ISSUE_URL` | Full Execution API URL `…/v1/scripts/{API_EXECUTABLE_ID}:run` for debug issue — *or* set `SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID` only (same id as `authenticatorApiExecutableDeploymentId` in `tt-deploy-ids.json`). |
 | `SMOKE_DEBUG_AUTH_WEB_EXEC_URL` | Full authenticator Web `/exec` for debug verify — *or* set `SMOKE_DEBUG_AUTH_WEB_DEPLOYMENT_ID` only (same id as `authenticatorDeploymentId`), or use Web-shaped `AUTHENTICATOR_BASE_URL`. |
 
-- **`smokeTest_runFullBattery()`** runs all four: reach authenticator → end-to-end `getToken` → debug API issue → debug verify; returns one JSON blob with `summary.allFourOk`.
+- **`smokeTest_runFullBattery()`** — always runs reach authenticator + end-to-end `getToken`; optionally runs Script API + Web verify debug steps **only if** `SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID` or `SMOKE_DEBUG_AUTH_API_ISSUE_URL` is set. `summary.batteryOk` / `summary.allFourOk` are true when the core pair succeeds and (debug skipped **or** debug suite passes).
 
 ---
 

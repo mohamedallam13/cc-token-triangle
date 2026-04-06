@@ -25,11 +25,21 @@
  *   SMOKE_TEST_BROKER_EXEC_URL — full broker /exec URL
  *   SMOKE_TEST_BROKER_WEB_DEPLOYMENT_ID — broker Web deployment id only (builds /exec URL)
  *
- * Full suite: smokeTest_runFullBattery() — runs all four smokes and returns one JSON string.
+ * Full suite: smokeTest_runFullBattery() — runs production smokes (1–2); steps 3–4 run only if
+ * SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID or SMOKE_DEBUG_AUTH_API_ISSUE_URL is set (optional API+Web debug).
  */
 ;(function (root, factory) {
   root.BROKER_SMOKE = factory();
 })(this, function () {
+  /** Script API issue endpoint configured — required to run debug steps 3–4. */
+  function isDebugApiIssueConfigured(props) {
+    var p = props || PropertiesService.getScriptProperties();
+    if ((p.getProperty('SMOKE_DEBUG_AUTH_API_ISSUE_URL') || '').trim()) {
+      return true;
+    }
+    return !!(p.getProperty('SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID') || '').trim();
+  }
+
   function buildApiRunUrlFromExecutableId(id) {
     var s = String(id || '').trim();
     if (!s) return '';
@@ -376,32 +386,51 @@
   }
 
   /**
-   * Runs all four smoke entry points in order; returns one JSON string for Logs.
-   * Steps 3–4 need SMOKE_DEBUG_* URLs or *_EXECUTABLE_ID / *_DEPLOYMENT_ID properties.
+   * Runs reach + e2e (always). Optional debug steps 3–4 only if Script API issue URL/id is configured.
+   * summary.batteryOk / allFourOk: core OK and (debug skipped OR debug suite OK).
    */
   function runFullBattery() {
+    var props = PropertiesService.getScriptProperties();
+    var debugConfigured = isDebugApiIssueConfigured(props);
     var report = {
       step1_reachAuthenticator: tryParseJson(runReachAuthenticator()),
       step2_endToEnd: tryParseJson(runEndToEndDeployed()),
-      step3_debugIssueAuthApi: issueAuthApiRaw(),
-      step4_debugVerifyAfterApiIssue: tryParseJson(debugVerifyAfterApiIssue()),
     };
+    if (!debugConfigured) {
+      report.step3_debugIssueAuthApi = {
+        skipped: true,
+        reason:
+          'Set SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID (same value as authenticatorApiExecutableDeploymentId in tt-deploy-ids.json) or SMOKE_DEBUG_AUTH_API_ISSUE_URL to run optional Script API + Web verify checks',
+      };
+      report.step4_debugVerifyAfterApiIssue = {
+        skipped: true,
+        reason: 'Requires step 3 Script API issue',
+      };
+      console.log(
+        '[BROKER_SMOKE] full battery — optional debug steps 3–4 skipped (no API Executable id/URL)'
+      );
+    } else {
+      report.step3_debugIssueAuthApi = issueAuthApiRaw();
+      report.step4_debugVerifyAfterApiIssue = tryParseJson(debugVerifyAfterApiIssue());
+    }
     var s1 = report.step1_reachAuthenticator;
     var s2 = report.step2_endToEnd;
     var s3 = report.step3_debugIssueAuthApi;
     var s4 = report.step4_debugVerifyAfterApiIssue;
+    var coreOk = !!(s1 && s1.ok === true) && !!(s2 && s2.ok === true);
+    var debugOk =
+      !debugConfigured ||
+      (!!s3 && !s3.skipped && Number(s3.http) === 200 && !!s4 && !s4.skipped && s4.ok === true);
     report.summary = {
       reachAuthenticatorOk: !!(s1 && s1.ok === true),
       endToEndOk: !!(s2 && s2.ok === true),
-      debugIssueAuthApiOk: !!(s3 && Number(s3.http) === 200),
-      debugVerifyAfterApiIssueOk: !!(s4 && s4.ok === true),
-      allFourOk: false,
+      debugSuiteConfigured: debugConfigured,
+      debugIssueAuthApiOk: debugConfigured ? !!(s3 && !s3.skipped && Number(s3.http) === 200) : null,
+      debugVerifyAfterApiIssueOk: debugConfigured ? !!(s4 && !s4.skipped && s4.ok === true) : null,
+      coreOk: coreOk,
+      batteryOk: coreOk && debugOk,
+      allFourOk: coreOk && debugOk,
     };
-    report.summary.allFourOk =
-      report.summary.reachAuthenticatorOk &&
-      report.summary.endToEndOk &&
-      report.summary.debugIssueAuthApiOk &&
-      report.summary.debugVerifyAfterApiIssueOk;
     console.log('[BROKER_SMOKE] full battery summary', JSON.stringify(report.summary));
     return JSON.stringify(report, null, 2);
   }
