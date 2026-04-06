@@ -22,16 +22,16 @@ Consumer (caller)
 
 | Project | Role | Web app? |
 |---|---|---|
-| `authenticator/` | Issues short-lived codes; verifies codes for the broker | Yes |
-| `token-broker/` | Verifies code with Authenticator; returns `TOKEN_*` from Script Properties | Yes |
-| `sample-caller/` | Demo + reusable `TokenClient.js` | No |
+| `apps/authenticator/` | Issues short-lived codes; verifies codes for the broker | Yes |
+| `apps/token-broker/` | Verifies code with Authenticator; returns `TOKEN_*` from Script Properties | Yes |
+| `apps/sample-caller/` | Demo + reusable `TokenClient.js` | No |
 
 ---
 
 ## Issues Found & Fixed
 
 ### 1. TTL too long ✅ Fixed
-**File:** `authenticator/src/ENV.js`
+**File:** `apps/authenticator/src/ENV.js`
 
 `CODE_TTL_SECONDS` was `300` (5 minutes). Challenge codes should be short-lived — 5 minutes is a wide replay window if a code is intercepted in transit.
 
@@ -42,7 +42,7 @@ Consumer (caller)
 ---
 
 ### 2. `/issue` endpoint was open — no caller authentication ✅ Fixed
-**Files:** `authenticator/src/ENV.js`, `authenticator/src/AuthApp.js`, `authenticator/src/Utils.js`, `sample-caller/src/TokenClient.js`
+**Files:** `apps/authenticator/src/ENV.js`, `apps/authenticator/src/AuthApp.js`, `apps/authenticator/src/Utils.js`, `apps/sample-caller/src/TokenClient.js`
 
 Any script that discovered the Authenticator URL could call `POST { action: "issue" }` with no credentials and receive a valid challenge code. Protection was fully deferred to the Broker's `AUTH_INTERNAL_SECRET` gate during verify — one layer, no depth.
 
@@ -65,7 +65,7 @@ Any script that discovered the Authenticator URL could call `POST { action: "iss
 ---
 
 ### 3. No rate limiting on `/issue` ✅ Fixed
-**Files:** `authenticator/src/ENV.js`, `authenticator/src/AuthApp.js`
+**Files:** `apps/authenticator/src/ENV.js`, `apps/authenticator/src/AuthApp.js`
 
 Anyone who knew the Authenticator URL could spam `/issue` and exhaust CacheService quota, degrading availability for all consumers.
 
@@ -85,7 +85,7 @@ Anyone who knew the Authenticator URL could spam `/issue` and exhaust CacheServi
 ---
 
 ### 4. `missing` tokens returned silently with `ok: true` ✅ Fixed
-**File:** `token-broker/src/BrokerApp.js`
+**File:** `apps/token-broker/src/BrokerApp.js`
 
 When the Broker couldn't find a requested token name in Script Properties, it added it to a `missing[]` array but still returned `ok: true`. Callers had to check `result.broker.missing` manually — easy to miss, caused silent downstream failures.
 
@@ -124,11 +124,11 @@ Both the Authenticator and Broker must be deployed and live. If either goes down
 
 | File | Change |
 |---|---|
-| `authenticator/src/ENV.js` | TTL 300→60; add `PROP_CALLER_SECRET`, `getCallerSecret()`, `ISSUE_RATE_KEY`, `ISSUE_RATE_MAX` |
-| `authenticator/src/Utils.js` | Add `extractCallerSecret(headers)` |
-| `authenticator/src/AuthApp.js` | Add `checkIssueRateLimit(cache)`, `checkCallerSecret(headers)`; refactor `routeIssue(event)` to accept event; pass cache down to `issueNewCode(cache)` |
-| `sample-caller/src/TokenClient.js` | Add `PROP_CALLER_SECRET`; read and forward `X-Caller-Secret` header on `/issue`; `postJson` accepts optional `extraHeaders` |
-| `token-broker/src/BrokerApp.js` | `runExchange`: return `ok:false` + `missing[]` when any token name is not found; `handlePost`: forward `missing` in error response |
+| `apps/authenticator/src/ENV.js` | TTL 300→60; add `PROP_CALLER_SECRET`, `getCallerSecret()`, `ISSUE_RATE_KEY`, `ISSUE_RATE_MAX` |
+| `apps/authenticator/src/Utils.js` | Add `extractCallerSecret(headers)` |
+| `apps/authenticator/src/AuthApp.js` | Add `checkIssueRateLimit(cache)`, `checkCallerSecret(headers)`; refactor `routeIssue(event)` to accept event; pass cache down to `issueNewCode(cache)` |
+| `apps/sample-caller/src/TokenClient.js` | Add `PROP_CALLER_SECRET`; read and forward `X-Caller-Secret` header on `/issue`; `postJson` accepts optional `extraHeaders` |
+| `apps/token-broker/src/BrokerApp.js` | `runExchange`: return `ok:false` + `missing[]` when any token name is not found; `handlePost`: forward `missing` in error response |
 | `.gitignore` | Ignore `**/SetupTemp.js` (optional local bootstrap only) |
 | `tests/authenticator.gas.test.js` | Add `CALLER_SECRET` to props; add `X-Caller-Secret` header to all issue events; add `issue rejects unauthorized caller` test |
 | `tests/token-broker.gas.test.js` | Update missing-keys test to assert `ok: false` and `missing` in response |

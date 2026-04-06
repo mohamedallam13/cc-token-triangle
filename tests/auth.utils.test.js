@@ -4,7 +4,7 @@ describe('AUTH_UTILS (pure)', () => {
   let AUTH_UTILS;
   beforeEach(() => {
     jest.resetModules();
-    AUTH_UTILS = require(path.join(__dirname, '../authenticator/src/Utils.js')).AUTH_UTILS;
+    AUTH_UTILS = require(path.join(__dirname, '../apps/authenticator/src/Utils.js')).AUTH_UTILS;
   });
 
   test('secretHeaderOutcome accepts matching secret', () => {

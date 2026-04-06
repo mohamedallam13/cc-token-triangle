@@ -12,7 +12,7 @@ const {
   sampleCallerApiApiProperties,
 } = require('./fixtures/opsProperties');
 
-const CALLER_ROOT = path.join(__dirname, '../sample-caller/src');
+const CALLER_ROOT = path.join(__dirname, '../apps/sample-caller/src');
 
 /** Wraps result in Apps Script Execution API envelope. */
 function execApiResponse(result) {

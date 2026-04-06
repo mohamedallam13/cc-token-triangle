@@ -21,6 +21,8 @@ Allow **consumer** Google Apps Script projects to retrieve **named external secr
 | **token-broker** | `UrlFetch` verify → authenticator; return `TOKEN_*` keys | **Web app** `/exec` + optional **API Executable** for `getNamedTokens` |
 | **sample-caller** | Reference **`TokenClient.js`** + `runSample()` | Optional; not in production request path |
 
+In this repository the three clasp projects live under **`apps/`** (`apps/authenticator/`, `apps/token-broker/`, `apps/sample-caller/`).
+
 ---
 
 ## HTTP contracts (Web app `/exec`)

@@ -121,11 +121,13 @@ Operational detail (property names, headers, soft gates) is in **[`OPERATIONS.md
 
 ## Repository layout
 
+All three clasp projects live under **`apps/`** so the repo root stays tests, scripts, and docs.
+
 | Path | Role |
 |------|------|
-| [`authenticator/`](./authenticator/) | Challenge issue + verify |
-| [`token-broker/`](./token-broker/) | Verify + return named tokens |
-| [`sample-caller/`](./sample-caller/) | Reference **`TokenClient.js`** to copy into consumers |
+| [`apps/authenticator/`](./apps/authenticator/) | Challenge issue + verify |
+| [`apps/token-broker/`](./apps/token-broker/) | Verify + return named tokens |
+| [`apps/sample-caller/`](./apps/sample-caller/) | Reference **`TokenClient.js`** to copy into consumers |
 | [`tests/`](./tests/) | Jest tests for the GAS modules |
 | [`scripts/tt-deploy-ids.example.json`](./scripts/tt-deploy-ids.example.json) | Template for deployment IDs; copy to `tt-deploy-ids.json` locally (gitignored) |
 
@@ -133,7 +135,7 @@ Operational detail (property names, headers, soft gates) is in **[`OPERATIONS.md
 
 ## Quick start (developers)
 
-1. Clone the repo and open each of `authenticator/`, `token-broker/`, and optionally `sample-caller/` as **separate** Apps Script projects (e.g. with [`clasp`](https://github.com/google/clasp)).
+1. Clone the repo and open each of `apps/authenticator/`, `apps/token-broker/`, and optionally `apps/sample-caller/` as **separate** Apps Script projects (e.g. with [`clasp`](https://github.com/google/clasp)).
 2. Configure **Script Properties** and deployments as described in **[`OPERATIONS.md`](./OPERATIONS.md)**.
 3. Run **`npm install`** and **`npm test`** at the repo root to validate logic locally.
 

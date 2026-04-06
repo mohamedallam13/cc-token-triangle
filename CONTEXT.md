@@ -14,7 +14,7 @@ Narrative companion to [`OPERATIONS.md`](./OPERATIONS.md) and [`SPEC.md`](./SPEC
 
 | Phase | What happened |
 |--------|----------------|
-| **Initial design** | Three clasp projects: authenticator, token-broker, sample-caller + `TokenClient.js` UMD module. Web app `doGet`/`doPost` as global entry points. |
+| **Initial design** | Three clasp projects under `apps/` (authenticator, token-broker, sample-caller) + `TokenClient.js` UMD module. Web app `doGet`/`doPost` as global entry points. |
 | **Deployment model** | Pinned **Web app** deployment IDs → `https://script.google.com/macros/s/<id>/exec`. Local `tt-deploy-ids.json` (from example) tracks ids; **push ≠ live** until `clasp version` + `clasp deploy -i <deploymentId>`. |
 | **Smoke & debugging** | UrlFetch-based smoke tests in `SmokeTest.js` (not Jest pretending to be GAS). Hardcoded API `:run` URL for issue; discovered **Web vs API URL confusion** and **custom header visibility** on published web apps. |
 | **Authenticator verify fix** | Published web apps often **do not expose** `X-Internal-Secret` on `event.headers`. **Fix:** accept **`internalSecret` in JSON body** for `action: verify`; still send header when the runtime passes it through. |

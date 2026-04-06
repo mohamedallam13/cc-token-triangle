@@ -65,13 +65,13 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| `authenticator/src/` | Authenticator: `ENV.js`, `Utils.js`, `AuthApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
-| `token-broker/src/` | Broker: `ENV.js`, `Utils.js`, `BrokerApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
-| `sample-caller/src/` | Sample + copy-paste **`TokenClient.js`**, `main.js`, `appsscript.json` |
+| `apps/authenticator/src/` | Authenticator: `ENV.js`, `Utils.js`, `AuthApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
+| `apps/token-broker/src/` | Broker: `ENV.js`, `Utils.js`, `BrokerApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
+| `apps/sample-caller/src/` | Sample + copy-paste **`TokenClient.js`**, `main.js`, `appsscript.json` |
 | `scripts/` | `tt-deploy-ids.example.json` (template); copy to `tt-deploy-ids.json` locally (gitignored) for real ids |
 | `tests/` | Jest + `@mcpher/gas-fakes` + `vm` sandboxes (`tests/vm-fakes/`) |
 
-Each subfolder has its own **`.clasp.json`** (script id, `rootDir`, `filePushOrder`).
+The **`apps/`** folder groups the three clasp roots so they are not mixed with `tests/`, `scripts/`, and top-level docs. Each of `apps/authenticator/`, `apps/token-broker/`, and `apps/sample-caller/` has its own **`.clasp.json`** (script id, `rootDir`, `filePushOrder`).
 
 ---
 
@@ -105,7 +105,7 @@ Keep deployment and script ids in a **local** [`scripts/tt-deploy-ids.json`](./s
 
 ## 6. Procedures (clasp)
 
-All commands below assume you **`cd`** into the right project folder (`authenticator/`, `token-broker/`, or `sample-caller/`) unless noted.
+All commands below assume you **`cd`** into the right project folder (`apps/authenticator/`, `apps/token-broker/`, or `apps/sample-caller/`) unless noted.
 
 ### 6.1 Push source to Google
 
@@ -195,7 +195,7 @@ Secrets and URLs are **not** stored in git. For each Apps Script project, open *
 
 - **Generate secrets** outside the repo (password manager), paste into Script Properties only.
 
-- Optional **broker** Run-menu smokes (`token-broker/src/SmokeTest.js`): set only if you use them.
+- Optional **broker** Run-menu smokes (`apps/token-broker/src/SmokeTest.js`): set only if you use them.
 
 | Property | Purpose |
 |----------|---------|

@@ -3,7 +3,7 @@ const { installAuthenticatorGasFakes } = require('./vm-fakes/installAuthenticato
 const { runFilesInSandbox, authenticatorChain } = require('./loadGasSandbox');
 const { readTextOutput } = require('./vm-fakes/readTextOutput');
 
-const AUTH_ROOT = path.join(__dirname, '../authenticator/src');
+const AUTH_ROOT = path.join(__dirname, '../apps/authenticator/src');
 
 describe('Authenticator (GAS fakes + vm sandbox)', () => {
   test('bootstrap loaded @mcpher/gas-fakes (Utilities on globalThis)', () => {

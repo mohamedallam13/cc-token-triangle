@@ -1,6 +1,6 @@
 {
-  "manifest": "./authenticator/src/appsscript.json",
-  "clasp": "./authenticator/.clasp.json",
+  "manifest": "./apps/authenticator/src/appsscript.json",
+  "clasp": "./apps/authenticator/.clasp.json",
   "documentId": null,
   "cache": "/tmp/gas-fakes/token-triangle/cache",
   "properties": "/tmp/gas-fakes/token-triangle/properties",

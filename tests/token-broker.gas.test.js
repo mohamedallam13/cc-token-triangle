@@ -11,7 +11,7 @@ const {
   brokerScriptProperties,
 } = require('./fixtures/opsProperties');
 
-const BROKER_ROOT = path.join(__dirname, '../token-broker/src');
+const BROKER_ROOT = path.join(__dirname, '../apps/token-broker/src');
 
 function loadBroker(sandbox, props, urlFetchAppOrHandler) {
   installTokenBrokerGasFakes(sandbox, props, urlFetchAppOrHandler);

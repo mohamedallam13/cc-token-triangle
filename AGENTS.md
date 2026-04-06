@@ -10,9 +10,9 @@ Three **standalone** Google Apps Script projects (`clasp` `rootDir: src` each):
 
 | Project | Role | Deploy |
 |---------|------|--------|
-| `authenticator/` | Issues short-lived codes; verifies codes (one-time cache) | **Web app** `doGet` / `doPost` on `/exec`; optional **API Executable** for `issueCode` |
-| `token-broker/` | `UrlFetch` → authenticator verify; returns `TOKEN_<NAME>` from Script Properties | **Web app** + optional **API Executable** for `getNamedTokens` |
-| `sample-caller/` | Reference **`TokenClient.js`** + `runSample()` | Optional — **not** required in production traffic |
+| `apps/authenticator/` | Issues short-lived codes; verifies codes (one-time cache) | **Web app** `doGet` / `doPost` on `/exec`; optional **API Executable** for `issueCode` |
+| `apps/token-broker/` | `UrlFetch` → authenticator verify; returns `TOKEN_<NAME>` from Script Properties | **Web app** + optional **API Executable** for `getNamedTokens` |
+| `apps/sample-caller/` | Reference **`TokenClient.js`** + `runSample()` | Optional — **not** required in production traffic |
 
 **Push with `clasp-cc`** (CC Apps Script account).
 
@@ -51,7 +51,7 @@ Google invokes **only top-level** `function doGet` / `function doPost` for web a
 
 ---
 
-## Reusable client — [`sample-caller/src/TokenClient.js`](./sample-caller/src/TokenClient.js)
+## Reusable client — [`apps/sample-caller/src/TokenClient.js`](./apps/sample-caller/src/TokenClient.js)
 
 Copy into any consumer project (list in `filePushOrder` **before** `main.js`). Requires `script.external_request` in manifest.
 
@@ -91,7 +91,7 @@ Copy into any consumer project (list in `filePushOrder` **before** `main.js`). R
 
 - **Not** Jest — **Run menu** in Apps Script; uses **`UrlFetchApp`** against **deployed** URLs and **`console.log`** / **`Logger.log`**.
 - **Authenticator:** `smokeTest_runUrlFetch` — issue + verify via Web `/exec`.
-- **Broker:** `smokeTest_reachAuthenticator`, `smokeTest_endToEndDeployed`, debug helpers — see `token-broker/src/SmokeTest.js`.
+- **Broker:** `smokeTest_reachAuthenticator`, `smokeTest_endToEndDeployed`, debug helpers — see `apps/token-broker/src/SmokeTest.js`.
 - Broker debug uses **hardcoded** Web `/exec` + plumbing secrets when isolating auth vs props issues.
 
 ---
@@ -116,9 +116,9 @@ Inside `AuthApp.js`, `BrokerApp.js`, `TokenClient.js`: `const`/config → **publ
 
 | Path | Files |
 |------|--------|
-| `authenticator/src/` | `ENV.js`, `Utils.js`, `AuthApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
-| `token-broker/src/` | `ENV.js`, `Utils.js`, `BrokerApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
-| `sample-caller/src/` | `TokenClient.js`, `main.js`, `appsscript.json` |
+| `apps/authenticator/src/` | `ENV.js`, `Utils.js`, `AuthApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
+| `apps/token-broker/src/` | `ENV.js`, `Utils.js`, `BrokerApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
+| `apps/sample-caller/src/` | `TokenClient.js`, `main.js`, `appsscript.json` |
 
 ---
 

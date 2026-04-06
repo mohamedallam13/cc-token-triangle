@@ -1,7 +1,7 @@
 {
   "name": "cc-token-triangle",
   "private": true,
-  "description": "Unit tests for CC Token Triangle (GAS projects live in authenticator/, token-broker/, sample-caller/)",
+  "description": "Unit tests for Token Triangle (three clasp apps under apps/)",
   "scripts": {
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
     "test:integration": "node tests/integration.mjs"
