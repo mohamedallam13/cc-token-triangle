@@ -127,14 +127,14 @@ Shows deployment ids and which **version** each points at (`@N`).
 
 **Push does not change what the public web app runs** until you snapshot and redeploy.
 
-**One-shot (from Token Triangle repo root):** with local [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json) filled in, run:
+**One-shot (from Token Triangle repo root):** with local [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json) filled in:
 
 ```bash
-npm run redeploy:web -- "short description of change"
-# or: DEPLOY_MESSAGE="short description" npm run redeploy:web
+chmod +x scripts/redeploy-web-apps.sh   # once
+./scripts/redeploy-web-apps.sh "short description of change"
 ```
 
-This runs **`clasp-cc`**-equivalent commands via [`scripts/clasp-cc`](./scripts/clasp-cc): `push --force` → `version` → `deploy -i …` for **both** [`apps/authenticator/`](./apps/authenticator/) and [`apps/token-broker/`](./apps/token-broker/). Same account as `~/.clasp/cc.clasprc.json` (override with `CLASP_AUTH` if needed). See [`scripts/redeploy-web-apps.mjs`](./scripts/redeploy-web-apps.mjs).
+That script runs the same **`clasp-cc`** steps (`push --force` → `version` → `deploy -i …`) in each app via [`scripts/clasp-cc`](./scripts/clasp-cc) (same profile as your `clasp-cc` alias). Or run those **`clasp-cc`** commands yourself in [`apps/authenticator/`](./apps/authenticator/) and [`apps/token-broker/`](./apps/token-broker/) — see **Manual** below. `CLASP_AUTH` overrides the auth file if needed.
 
 **Manual (same steps):**
 
