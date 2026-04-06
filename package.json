@@ -4,7 +4,8 @@
   "description": "Unit tests for Token Triangle (three clasp apps under apps/)",
   "scripts": {
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
-    "test:integration": "node tests/integration.mjs"
+    "test:integration": "node tests/integration.mjs",
+    "redeploy:web": "node scripts/redeploy-web-apps.mjs"
   },
   "devDependencies": {
     "@mcpher/gas-fakes": "^2.3.4",

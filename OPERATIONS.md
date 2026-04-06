@@ -125,7 +125,18 @@ Shows deployment ids and which **version** each points at (`@N`).
 
 ### 6.3 Ship a change to live `/exec` (Authenticator & Token broker only)
 
-**Push does not change what the public web app runs** until you snapshot and redeploy:
+**Push does not change what the public web app runs** until you snapshot and redeploy.
+
+**One-shot (from Token Triangle repo root):** with local [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json) filled in, run:
+
+```bash
+npm run redeploy:web -- "short description of change"
+# or: DEPLOY_MESSAGE="short description" npm run redeploy:web
+```
+
+This runs `clasp push --force` → `clasp version` → `clasp deploy -i …` for **both** [`apps/authenticator/`](./apps/authenticator/) and [`apps/token-broker/`](./apps/token-broker/) using the same account as `~/.clasp/cc.clasprc.json` (override with `CLASP_AUTH` if needed). See [`scripts/redeploy-web-apps.mjs`](./scripts/redeploy-web-apps.mjs).
+
+**Manual (same steps):**
 
 ```bash
 clasp-cc push --force
