@@ -195,7 +195,16 @@ Secrets and URLs are **not** stored in git. For each Apps Script project, open *
 
 - **Generate secrets** outside the repo (password manager), paste into Script Properties only.
 
-- Optional smoke keys (`SMOKE_TEST_*`) are documented in `SmokeTest.js` headers — set only if you use Run-menu smoke tests.
+- Optional **broker** Run-menu smokes (`token-broker/src/SmokeTest.js`): set only if you use them.
+
+| Property | Purpose |
+|----------|---------|
+| `SMOKE_TEST_CALLER_SECRET` | Same value as authenticator `CALLER_SECRET` (issue step). |
+| `SMOKE_TEST_BROKER_EXEC_URL` | Full broker Web `/exec` URL for end-to-end smoke — *or* set `SMOKE_TEST_BROKER_WEB_DEPLOYMENT_ID` (bare id → same URL pattern as §9 URLs). |
+| `SMOKE_DEBUG_AUTH_API_ISSUE_URL` | Full Execution API URL `…/v1/scripts/{API_EXECUTABLE_ID}:run` for debug issue — *or* set `SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID` only (same id as `authenticatorApiExecutableDeploymentId` in `tt-deploy-ids.json`). |
+| `SMOKE_DEBUG_AUTH_WEB_EXEC_URL` | Full authenticator Web `/exec` for debug verify — *or* set `SMOKE_DEBUG_AUTH_WEB_DEPLOYMENT_ID` only (same id as `authenticatorDeploymentId`), or use Web-shaped `AUTHENTICATOR_BASE_URL`. |
+
+- **`smokeTest_runFullBattery()`** runs all four: reach authenticator → end-to-end `getToken` → debug API issue → debug verify; returns one JSON blob with `summary.allFourOk`.
 
 ---
 

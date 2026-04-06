@@ -13,14 +13,43 @@
  *
  * Debug (broker vs auth): smokeTest_debugIssueAuthApi() |
  *   smokeTest_debugVerifyAfterApiIssue() — issue via Script API; verify via Web /exec.
- *   Set Script Properties (never hardcode in source):
- *   SMOKE_DEBUG_AUTH_API_ISSUE_URL — full https://script.googleapis.com/v1/scripts/{id}:run
- *   SMOKE_DEBUG_AUTH_WEB_EXEC_URL — authenticator Web /exec (or use AUTHENTICATOR_BASE_URL if it is Web /exec)
+ *   Use either full URLs or bare deployment ids (same values as tt-deploy-ids.json):
+ *   SMOKE_DEBUG_AUTH_API_ISSUE_URL — full …/scripts/{API_EXECUTABLE_ID}:run
+ *   SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID — API Executable id only (builds the URL above)
+ *   SMOKE_DEBUG_AUTH_WEB_EXEC_URL — full …/macros/s/{WEB_DEPLOYMENT_ID}/exec
+ *   SMOKE_DEBUG_AUTH_WEB_DEPLOYMENT_ID — Web app deployment id only (builds /exec URL)
+ *   AUTHENTICATOR_BASE_URL — if already Web /exec, used as verify URL when WEB_* omitted
  *   AUTH_INTERNAL_SECRET — must match authenticator
+ *
+ * End-to-end optional:
+ *   SMOKE_TEST_BROKER_EXEC_URL — full broker /exec URL
+ *   SMOKE_TEST_BROKER_WEB_DEPLOYMENT_ID — broker Web deployment id only (builds /exec URL)
+ *
+ * Full suite: smokeTest_runFullBattery() — runs all four smokes and returns one JSON string.
  */
 ;(function (root, factory) {
   root.BROKER_SMOKE = factory();
 })(this, function () {
+  function buildApiRunUrlFromExecutableId(id) {
+    var s = String(id || '').trim();
+    if (!s) return '';
+    return 'https://script.googleapis.com/v1/scripts/' + s + ':run';
+  }
+
+  function buildWebExecUrlFromDeploymentId(id) {
+    var s = String(id || '').trim();
+    if (!s) return '';
+    return 'https://script.google.com/macros/s/' + s + '/exec';
+  }
+
+  function tryParseJson(s) {
+    try {
+      return JSON.parse(s);
+    } catch (e) {
+      return { _parseError: String(e), _raw: String(s).substring(0, 2000) };
+    }
+  }
+
   function postToExec(url, payload, headerMap) {
     var headers = {};
     var key;
@@ -126,13 +155,18 @@
   function runEndToEndDeployed() {
     var props = PropertiesService.getScriptProperties();
     var brokerExec = (props.getProperty('SMOKE_TEST_BROKER_EXEC_URL') || '').trim();
+    if (!brokerExec) {
+      brokerExec = buildWebExecUrlFromDeploymentId(
+        props.getProperty('SMOKE_TEST_BROKER_WEB_DEPLOYMENT_ID')
+      );
+    }
     var authUrl = (props.getProperty('AUTHENTICATOR_BASE_URL') || '').trim();
     var caller = (props.getProperty('SMOKE_TEST_CALLER_SECRET') || '').trim();
     console.log('[BROKER_SMOKE] endToEnd — broker exec set:', !!brokerExec, 'auth url set:', !!authUrl);
 
     if (!brokerExec || !authUrl || !caller) {
       var msg0 =
-        'Set SMOKE_TEST_BROKER_EXEC_URL, AUTHENTICATOR_BASE_URL, SMOKE_TEST_CALLER_SECRET';
+        'Set SMOKE_TEST_BROKER_EXEC_URL or SMOKE_TEST_BROKER_WEB_DEPLOYMENT_ID, AUTHENTICATOR_BASE_URL, SMOKE_TEST_CALLER_SECRET';
       console.log('[BROKER_SMOKE] endToEnd FAIL — ' + msg0);
       return JSON.stringify({ ok: false, message: msg0 });
     }
@@ -223,8 +257,13 @@
     var props = PropertiesService.getScriptProperties();
     var apiUrl = (props.getProperty('SMOKE_DEBUG_AUTH_API_ISSUE_URL') || '').trim();
     if (!apiUrl) {
+      apiUrl = buildApiRunUrlFromExecutableId(
+        props.getProperty('SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID')
+      );
+    }
+    if (!apiUrl) {
       var err =
-        'Set SMOKE_DEBUG_AUTH_API_ISSUE_URL to full script.googleapis.com/.../scripts/{API_EXECUTABLE_ID}:run';
+        'Set SMOKE_DEBUG_AUTH_API_ISSUE_URL (full …:run URL) or SMOKE_DEBUG_AUTH_API_EXECUTABLE_ID (bare API Executable id)';
       console.log('[BROKER_SMOKE] issueAuthApiRaw — ' + err);
       return { http: 0, raw: JSON.stringify({ error: err }) };
     }
@@ -271,8 +310,13 @@
       return JSON.stringify({ ok: false, message: 'Set AUTH_INTERNAL_SECRET' });
     }
     if (!verifyUrl) {
+      verifyUrl = buildWebExecUrlFromDeploymentId(
+        props.getProperty('SMOKE_DEBUG_AUTH_WEB_DEPLOYMENT_ID')
+      );
+    }
+    if (!verifyUrl) {
       var hint =
-        'Set SMOKE_DEBUG_AUTH_WEB_EXEC_URL (authenticator Web /exec), or set AUTHENTICATOR_BASE_URL to that Web /exec URL';
+        'Set SMOKE_DEBUG_AUTH_WEB_EXEC_URL, SMOKE_DEBUG_AUTH_WEB_DEPLOYMENT_ID, or AUTHENTICATOR_BASE_URL (Web /exec)';
       console.log('[BROKER_SMOKE] debugVerify — ' + hint);
       return JSON.stringify({ ok: false, message: hint });
     }
@@ -323,11 +367,43 @@
     });
   }
 
+  /**
+   * Runs all four smoke entry points in order; returns one JSON string for Logs.
+   * Steps 3–4 need SMOKE_DEBUG_* URLs or *_EXECUTABLE_ID / *_DEPLOYMENT_ID properties.
+   */
+  function runFullBattery() {
+    var report = {
+      step1_reachAuthenticator: tryParseJson(runReachAuthenticator()),
+      step2_endToEnd: tryParseJson(runEndToEndDeployed()),
+      step3_debugIssueAuthApi: issueAuthApiRaw(),
+      step4_debugVerifyAfterApiIssue: tryParseJson(debugVerifyAfterApiIssue()),
+    };
+    var s1 = report.step1_reachAuthenticator;
+    var s2 = report.step2_endToEnd;
+    var s3 = report.step3_debugIssueAuthApi;
+    var s4 = report.step4_debugVerifyAfterApiIssue;
+    report.summary = {
+      reachAuthenticatorOk: !!(s1 && s1.ok === true),
+      endToEndOk: !!(s2 && s2.ok === true),
+      debugIssueAuthApiOk: !!(s3 && Number(s3.http) === 200),
+      debugVerifyAfterApiIssueOk: !!(s4 && s4.ok === true),
+      allFourOk: false,
+    };
+    report.summary.allFourOk =
+      report.summary.reachAuthenticatorOk &&
+      report.summary.endToEndOk &&
+      report.summary.debugIssueAuthApiOk &&
+      report.summary.debugVerifyAfterApiIssueOk;
+    console.log('[BROKER_SMOKE] full battery summary', JSON.stringify(report.summary));
+    return JSON.stringify(report, null, 2);
+  }
+
   return {
     runReachAuthenticator: runReachAuthenticator,
     runEndToEndDeployed: runEndToEndDeployed,
     issueAuthApiRaw: issueAuthApiRaw,
     debugVerifyAfterApiIssue: debugVerifyAfterApiIssue,
+    runFullBattery: runFullBattery,
   };
 });
 
@@ -346,4 +422,9 @@ function smokeTest_debugIssueAuthApi() {
 /** Issue via Script API, then verify via web: logs broker-style vs Bearer (compare to BrokerApp). */
 function smokeTest_debugVerifyAfterApiIssue() {
   return BROKER_SMOKE.debugVerifyAfterApiIssue();
+}
+
+/** Runs smokeTest_reachAuthenticator → endToEnd → debugIssueAuthApi → debugVerifyAfterApiIssue; one JSON report. */
+function smokeTest_runFullBattery() {
+  return BROKER_SMOKE.runFullBattery();
 }
