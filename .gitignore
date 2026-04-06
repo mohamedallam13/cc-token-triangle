@@ -1,0 +1,4 @@
+node_modules/
+scripts/generated/
+# SetupTemp is a one-off bootstrapper — must be removed after setup, never committed to production
+**/SetupTemp.js
