@@ -7,6 +7,8 @@ Internal **challenge → exchange** for named secrets without pasting tokens int
 
 **Deploy:** `theoracle@cairoconfessions.com` via **`clasp-cc`**.
 
+**GitHub:** Standalone mirror — [`mohamedallam13/cc-token-triangle`](https://github.com/mohamedallam13/cc-token-triangle) (subtree from Atlas). Full portfolio — [`mohamedallam13/Atlas`](https://github.com/mohamedallam13/Atlas) (`Projects/CC/Systems/Token Triangle/`). See [`OPERATIONS.md`](./OPERATIONS.md) for **two-remote** push commands.
+
 | Doc | Use for |
 |-----|---------|
 | **[`OPERATIONS.md`](./OPERATIONS.md)** | Full **context**, **step-by-step procedures**, **lessons learned**, troubleshooting |

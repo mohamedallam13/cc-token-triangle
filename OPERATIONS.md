@@ -16,6 +16,29 @@ Single place for **why this exists**, **how it fits Cairo Confessions**, **what 
 
 The deploying Google account for these scripts is **`theoracle@cairoconfessions.com`**; local push uses the **`clasp-cc`** alias (CC clasp profile per Atlas `AGENTS.md`).
 
+### Git: two remotes (Atlas + dedicated repo)
+
+Token Triangle is developed inside the **Atlas** monorepo, but it also has a **standalone mirror** for a clean project URL and future CI.
+
+| Remote | URL | What it is |
+|--------|-----|------------|
+| **`origin`** | `https://github.com/mohamedallam13/Atlas.git` | Full Atlas portfolio; this system lives at `Projects/CC/Systems/Token Triangle/`. |
+| **`token-triangle`** | `https://github.com/mohamedallam13/cc-token-triangle` | **Only** this subtree (same files at repo root there). Private repo. |
+
+**After you commit Token Triangle changes on `main` in Atlas**, publish both:
+
+```bash
+cd /path/to/Atlas
+git push origin main
+git subtree push --prefix="Projects/CC/Systems/Token Triangle" token-triangle main
+```
+
+`git subtree push` rewrites history for that prefix; the first run may take a few seconds. If the dedicated remote is missing on a new clone:
+
+```bash
+git remote add token-triangle https://github.com/mohamedallam13/cc-token-triangle.git
+```
+
 ---
 
 ## 2. Architecture (mental model)
