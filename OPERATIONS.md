@@ -68,7 +68,7 @@ sequenceDiagram
 | `authenticator/src/` | Authenticator: `ENV.js`, `Utils.js`, `AuthApp.js`, optional `SetupTemp.js`, `main.js`, `appsscript.json` |
 | `token-broker/src/` | Broker: `ENV.js`, `Utils.js`, `BrokerApp.js`, optional `SetupTemp.js`, `main.js`, `appsscript.json` |
 | `sample-caller/src/` | Sample + copy-paste **`TokenClient.js`**, optional `SetupTemp.js`, `main.js`, `appsscript.json` |
-| `scripts/` | `tt-deploy-ids.json`, `tt-setup-deploy-urls.mjs` (temporary wiring aid) |
+| `scripts/` | `tt-deploy-ids.json` (deployment / script ids for `/exec` URLs) |
 | `tests/` | Jest + `@mcpher/gas-fakes` + `vm` sandboxes (`tests/vm-fakes/`) |
 
 Each subfolder has its own **`.clasp.json`** (script id, `rootDir`, `filePushOrder`).
@@ -80,11 +80,13 @@ Each subfolder has its own **`.clasp.json`** (script id, `rootDir`, `filePushOrd
 | Project | Property | Meaning |
 |---------|----------|---------|
 | **Authenticator** | `AUTH_INTERNAL_SECRET` | Shared secret; broker sends it when verifying; must match broker. |
+| **Authenticator** | `CALLER_SECRET` | Same value as on consumers — required for `/issue` (header `X-Caller-Secret`). |
 | **Token broker** | `AUTHENTICATOR_BASE_URL` | Full Authenticator **web app** URL ending in `/exec`. |
 | **Token broker** | `AUTH_INTERNAL_SECRET` | Same value as on Authenticator. |
 | **Token broker** | `TOKEN_<NAME>` | Secret value for logical name `<NAME>` (e.g. `TOKEN_DEMO`). |
 | **Consumer** | `AUTHENTICATOR_URL` | Authenticator `/exec` URL. |
 | **Consumer** | `TOKEN_BROKER_URL` | Broker `/exec` URL. |
+| **Consumer** | `CALLER_SECRET` | Must match Authenticator `CALLER_SECRET` for `/issue`. |
 | **Consumer** (optional) | `DEMO_TOKEN_NAMES` | Comma-separated names for `fetchNamedTokensFromProperties()`. |
 
 ---
@@ -149,7 +151,7 @@ Restore / merge `filePushOrder` from backup, then `clasp-cc push`.
 | Setting | Token Triangle choice | Why |
 |---------|-------------------------|-----|
 | `timeZone` | `Africa/Cairo` | CC operations are Egypt-oriented. |
-| `webapp.access` | `DOMAIN` | Only the **same Google Workspace** as the deployer (CC), not the whole internet. |
+| `webapp.access` | `ANYONE_ANONYMOUS` | `UrlFetchApp` makes unauthenticated HTTP requests — `DOMAIN` causes Google to redirect callers to a sign-in page, which breaks script-to-script calls. Security is handled by `CALLER_SECRET` + `AUTH_INTERNAL_SECRET`, not by Google's domain gate. |
 | `webapp.executeAs` | `USER_DEPLOYING` | Predictable identity for UrlFetch and verification. |
 | **`executionApi`** | **Omitted** | We use **web app** deployments only. Adding `executionApi` pushes toward **API executable** + `clasp run` complexity; not required for `/exec`. |
 
@@ -170,11 +172,11 @@ npm test
 
 ---
 
-## 9. Temporary wiring helper
+## 9. Temporary wiring (`SetupTemp.js`)
 
-- **`npm run setup:urls`** (with `TT_AUTH_INTERNAL_SECRET` set) writes **`scripts/generated/tt-manual-script-properties.md`** (gitignored) — paste tables into each project’s Script properties.  
-- **`SetupTemp.js`** — optional `_ttSetup*` functions runnable from the **IDE** (Run menu), not via API executable.  
-- Remove `SetupTemp.js`, strip from `filePushOrder`, and delete the helper scripts when properties are stable.
+- **`SetupTemp.js`** in each project (`authenticator/`, `token-broker/`, `sample-caller/`) holds **pinned `/exec` URLs** and **`__EDIT_ME__` placeholders** for secrets. Edit in the Apps Script editor or locally, **Save**, **`clasp-cc push`**, then **Run → `runTtSetupAuthenticator` / `runTtSetupBroker` / `runTtSetupSampleCaller`** once each.  
+- **Do not** use `_ttSetup*(args)` from Run — Apps Script passes **no arguments**.  
+- Remove each `SetupTemp.js` and strip from `filePushOrder` when Script Properties are set. **Do not commit** files that contain real secrets.
 
 ---
 
@@ -192,6 +194,8 @@ All three projects expose metadata (service id, `scriptId`, auth status, declare
 4. **`clasp create` + existing `.clasp.json`** — Rename or move `.clasp.json` first, then create, then merge `filePushOrder`.  
 5. **Timezone** — Changing `timeZone` requires a **new version + redeploy** for web apps if you want `/exec` behavior aligned with the manifest snapshot.  
 6. **Tests** — GAS code uses UMD `})(this, …)`; Node tests use **vm** + fakes, not `globalThis` for project code.
+7. **Setup from Run menu** — Use **`runTtSetup*`** in **`SetupTemp.js`** with literals at the top of the file, not `_ttSetup*(args)` — Apps Script passes no arguments.
+8. **`DOMAIN` access breaks `UrlFetchApp`** — `UrlFetchApp.fetch()` is unauthenticated; `DOMAIN`-restricted web apps redirect it to a Google sign-in page, which returns HTML. `JSON.parse()` throws `Response was not JSON`. Use `ANYONE_ANONYMOUS` — the system's own secrets (`CALLER_SECRET`, `AUTH_INTERNAL_SECRET`) are the auth layer.
 
 ---
 
@@ -200,7 +204,9 @@ All three projects expose metadata (service id, `scriptId`, auth status, declare
 | Symptom | Check |
 |---------|--------|
 | `/exec` still runs old code | Did you **`version` + `deploy -i`** after `push`? |
-| 403 / access denied on `/exec` | `DOMAIN` requires callers to be in the **same Workspace** as the deployer; anonymous internet users cannot use it. |
+| Script properties **keys** exist but **values empty** | You ran a **parameterized** `_ttSetup*(arg)` from Run — use **`SetupTemp.js`** with `__EDIT_ME__` replaced at the top (see §9). |
+| `Error: Response was not JSON` + Google Drive HTML in the error | `appsscript.json` has `access: DOMAIN` — `UrlFetchApp` is unauthenticated, gets redirected to a sign-in page. Fix: set `access: ANYONE_ANONYMOUS` in both Authenticator and broker manifests, then push + version + redeploy. |
+| 403 / access denied on `/exec` from a browser | Expected if someone tries to open the URL in a browser without a Google account — not a problem for script-to-script calls. |
 | `clasp run` fails | We do not rely on it; use web app + paste properties or IDE Run on `SetupTemp`. |
 | `clasp create` says “Project file already exists” | Move `.clasp.json` aside first. |
 
