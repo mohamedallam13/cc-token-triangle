@@ -29,6 +29,20 @@ describe('Token broker (GAS fakes + vm sandbox)', () => {
     expect(typeof sandbox.doPost).toBe('function');
   });
 
+  test('exposes global getNamedTokens for API executable deployment', () => {
+    expect(typeof sandbox.getNamedTokens).toBe('function');
+  });
+
+  test('getNamedTokens returns tokens via exec path', () => {
+    const result = sandbox.getNamedTokens('any-code', ['DEMO']);
+    expect(result.ok).toBe(true);
+    expect(result.tokens.DEMO).toBe('secret-value-demo');
+  });
+
+  test('getNamedTokens throws on missing token via exec path', () => {
+    expect(() => sandbox.getNamedTokens('any-code', ['MISSING'])).toThrow();
+  });
+
   test('getPermission returns broker metadata', () => {
     const json = readTextOutput(
       sandbox.doPost({

@@ -11,6 +11,10 @@ function createFakeScriptApp() {
         },
       };
     },
+    getOAuthToken: function () {
+      return 'fake-oauth-token';
+    },
+    isFake: true,
   };
 }
 

@@ -6,7 +6,10 @@
   const PROP_TOKEN_BROKER_URL = 'TOKEN_BROKER_URL';
   const PROP_DEMO_TOKEN_NAMES = 'DEMO_TOKEN_NAMES';
   const PROP_CALLER_SECRET = 'CALLER_SECRET';
+  const PROP_AUTHENTICATOR_SCRIPT_ID = 'AUTHENTICATOR_SCRIPT_ID';
+  const PROP_TOKEN_BROKER_SCRIPT_ID = 'TOKEN_BROKER_SCRIPT_ID';
   const DEFAULT_DEMO_NAMES = 'DEMO';
+  const EXEC_API_BASE = 'https://script.googleapis.com/v1/scripts/';
 
   function fetchNamedTokens(names) {
     const props = PropertiesService.getScriptProperties();
@@ -52,6 +55,57 @@
       });
   }
 
+  /**
+   * Domain-restricted path — uses API Executable deployments.
+   * Requires AUTHENTICATOR_SCRIPT_ID + TOKEN_BROKER_SCRIPT_ID in Script Properties.
+   * Consumer must run under a cairoconfessions.com account (enforced by executionApi.access: DOMAIN).
+   */
+  function fetchNamedTokensExec(names) {
+    const props = PropertiesService.getScriptProperties();
+    const authId = props.getProperty(PROP_AUTHENTICATOR_SCRIPT_ID);
+    const brokerId = props.getProperty(PROP_TOKEN_BROKER_SCRIPT_ID);
+    if (!authId || !brokerId) {
+      throw new Error(
+        'Set AUTHENTICATOR_SCRIPT_ID and TOKEN_BROKER_SCRIPT_ID in Script Properties'
+      );
+    }
+    const token = ScriptApp.getOAuthToken();
+    const issue = callScriptApi(authId, 'issueCode', [], token);
+    if (!issue.code) {
+      throw new Error('issueCode returned no code: ' + JSON.stringify(issue));
+    }
+    const result = callScriptApi(brokerId, 'getNamedTokens', [issue.code, names], token);
+    return {
+      issued: { expiresInSeconds: issue.expiresInSeconds },
+      broker: result,
+    };
+  }
+  function callScriptApi(scriptId, functionName, parameters, oauthToken) {
+    const url = EXEC_API_BASE + scriptId + ':run';
+    const res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      headers: { 'Authorization': 'Bearer ' + oauthToken },
+      contentType: 'application/json',
+      payload: JSON.stringify({ function: functionName, parameters: parameters, devMode: false }),
+      muteHttpExceptions: true,
+    });
+    const text = res.getContentText() || '{}';
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Exec API response not JSON: ' + text);
+    }
+    if (parsed.error) {
+      const details = parsed.error.details;
+      const msg =
+        (details && details[0] && details[0].errorMessage) ||
+        JSON.stringify(parsed.error);
+      throw new Error('Script API error: ' + msg);
+    }
+    return parsed.response ? parsed.response.result : {};
+  }
+
   function postJson(url, payload, extraHeaders) {
     const headers = extraHeaders || {};
     const res = UrlFetchApp.fetch(String(url).trim(), {
@@ -78,6 +132,7 @@
   return {
     fetchNamedTokens,
     fetchNamedTokensFromProperties,
+    fetchNamedTokensExec,
     parseCommaNames,
   };
 });

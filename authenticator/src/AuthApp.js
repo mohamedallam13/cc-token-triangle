@@ -124,8 +124,20 @@
     return { body: { valid: true } };
   }
 
+  /** API Executable entry — no HTTP event; throws on error; domain restriction enforced by executionApi. */
+  function handleExecIssue() {
+    const cache = CacheService.getScriptCache();
+    const rateCheck = checkIssueRateLimit(cache);
+    if (!rateCheck.ok) {
+      throw new Error(rateCheck.error);
+    }
+    const issued = issueNewCode(cache);
+    return { code: issued.code, expiresInSeconds: issued.expiresInSeconds };
+  }
+
   return {
     handleGet,
     handlePost,
+    handleExecIssue,
   };
 });

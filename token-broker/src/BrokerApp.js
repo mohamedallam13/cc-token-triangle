@@ -156,8 +156,18 @@
     };
   }
 
+  /** API Executable entry — no HTTP event; throws on error; domain restriction enforced by executionApi. */
+  function handleExecGetTokens(code, names) {
+    const result = runExchange(String(code || ''), Array.isArray(names) ? names : []);
+    if (!result.ok) {
+      throw new Error(result.error || 'Token exchange failed');
+    }
+    return { ok: true, tokens: result.tokens, missing: result.missing || [] };
+  }
+
   return {
     handleGet,
     handlePost,
+    handleExecGetTokens,
   };
 });

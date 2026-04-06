@@ -26,6 +26,16 @@ describe('Authenticator (GAS fakes + vm sandbox)', () => {
     expect(typeof sandbox.doPost).toBe('function');
   });
 
+  test('exposes global issueCode for API executable deployment', () => {
+    expect(typeof sandbox.issueCode).toBe('function');
+  });
+
+  test('issueCode returns a code and TTL via exec path', () => {
+    const result = sandbox.issueCode();
+    expect(result.code).toBeDefined();
+    expect(result.expiresInSeconds).toBeGreaterThan(0);
+  });
+
   test('getPermission via POST returns script and scope metadata', () => {
     const out = sandbox.doPost({
       postData: {
