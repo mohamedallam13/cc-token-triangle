@@ -12,7 +12,11 @@ function installSampleCallerGasFakes(sandbox, propertyMap, urlFetchHandler) {
   sandbox.PropertiesService = createFakePropertiesService(props);
   sandbox.ScriptApp = createFakeScriptApp();
   sandbox.Logger = globalThis.Logger;
-  sandbox.UrlFetchApp = createFakeUrlFetchApp(urlFetchHandler);
+  if (urlFetchHandler && typeof urlFetchHandler.fetch === 'function') {
+    sandbox.UrlFetchApp = urlFetchHandler;
+  } else {
+    sandbox.UrlFetchApp = createFakeUrlFetchApp(urlFetchHandler);
+  }
   sandbox.console = console;
 }
 

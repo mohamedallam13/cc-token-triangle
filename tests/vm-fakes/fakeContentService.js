@@ -6,6 +6,9 @@ function createFakeContentService() {
     createTextOutput: function (text) {
       const out = {
         _text: text,
+        getContent: function () {
+          return this._text;
+        },
         setMimeType: function (mime) {
           this._mime = mime;
           return this;

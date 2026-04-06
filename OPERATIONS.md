@@ -1,6 +1,6 @@
 # Token Triangle — Operations & context
 
-Single place for **why this exists**, **how it fits Cairo Confessions**, **what we learned**, and **step-by-step procedures**. Rules for agents and code layout stay in [`AGENTS.md`](./AGENTS.md); a short product spec is in [`SPEC.md`](./SPEC.md).
+Single place for **why this exists**, **how it fits Cairo Confessions**, **what we learned**, and **step-by-step procedures**. Rules for agents and code layout stay in [`AGENTS.md`](./AGENTS.md); technical spec in [`SPEC.md`](./SPEC.md); **timeline, mistakes, and narrative** in [`CONTEXT.md`](./CONTEXT.md).
 
 ---
 
@@ -65,10 +65,10 @@ sequenceDiagram
 
 | Path | Role |
 |------|------|
-| `authenticator/src/` | Authenticator: `ENV.js`, `Utils.js`, `AuthApp.js`, optional `SetupTemp.js`, `main.js`, `appsscript.json` |
-| `token-broker/src/` | Broker: `ENV.js`, `Utils.js`, `BrokerApp.js`, optional `SetupTemp.js`, `main.js`, `appsscript.json` |
-| `sample-caller/src/` | Sample + copy-paste **`TokenClient.js`**, optional `SetupTemp.js`, `main.js`, `appsscript.json` |
-| `scripts/` | `tt-deploy-ids.json` (deployment / script ids for `/exec` URLs) |
+| `authenticator/src/` | Authenticator: `ENV.js`, `Utils.js`, `AuthApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
+| `token-broker/src/` | Broker: `ENV.js`, `Utils.js`, `BrokerApp.js`, `SmokeTest.js`, `main.js`, `appsscript.json` |
+| `sample-caller/src/` | Sample + copy-paste **`TokenClient.js`**, `main.js`, `appsscript.json` |
+| `scripts/` | `tt-deploy-ids.example.json` (template); copy to `tt-deploy-ids.json` locally (gitignored) for real ids |
 | `tests/` | Jest + `@mcpher/gas-fakes` + `vm` sandboxes (`tests/vm-fakes/`) |
 
 Each subfolder has its own **`.clasp.json`** (script id, `rootDir`, `filePushOrder`).
@@ -81,13 +81,15 @@ Each subfolder has its own **`.clasp.json`** (script id, `rootDir`, `filePushOrd
 |---------|----------|---------|
 | **Authenticator** | `AUTH_INTERNAL_SECRET` | Shared secret; broker sends it when verifying; must match broker. |
 | **Authenticator** | `CALLER_SECRET` | Same value as on consumers — required for `/issue` (header `X-Caller-Secret`). |
-| **Token broker** | `AUTHENTICATOR_BASE_URL` | Full Authenticator **web app** URL ending in `/exec`. |
+| **Token broker** | `AUTHENTICATOR_BASE_URL` | Full Authenticator **web app** URL ending in `/exec` — **never** `script.googleapis.com/...:run`. |
 | **Token broker** | `AUTH_INTERNAL_SECRET` | Same value as on Authenticator. |
 | **Token broker** | `TOKEN_<NAME>` | Secret value for logical name `<NAME>` (e.g. `TOKEN_DEMO`). |
-| **Consumer** | `AUTHENTICATOR_URL` | Authenticator `/exec` URL. |
-| **Consumer** | `TOKEN_BROKER_URL` | Broker `/exec` URL. |
+| **Consumer** | `AUTHENTICATOR_URL` | Authenticator `/exec` URL (when using `webapp` transport). |
+| **Consumer** | `TOKEN_BROKER_URL` | Broker `/exec` URL (when using `webapp` transport). |
+| **Consumer** | `AUTHENTICATOR_TRANSPORT`, `TOKEN_BROKER_TRANSPORT` | `webapp` or `script_api` (see `TokenClient.js`). |
 | **Consumer** | `CALLER_SECRET` | Must match Authenticator `CALLER_SECRET` for `/issue`. |
 | **Consumer** (optional) | `DEMO_TOKEN_NAMES` | Comma-separated names for `fetchNamedTokensFromProperties()`. |
+| **Consumer** (optional) | `TOKEN_CLIENT_VERBOSE` | Set `true` to log every step (or pass `{ verbose: true }` to `fetchNamedTokens`). |
 
 ---
 
@@ -97,7 +99,7 @@ Stable **web app** URLs look like:
 
 `https://script.google.com/macros/s/<deploymentId>/exec`
 
-Current deployment and script ids are tracked in [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json). **Update that file** only if you intentionally create a **new** web app deployment (new URL).
+Keep deployment and script ids in a **local** [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json) (copy from [`scripts/tt-deploy-ids.example.json`](./scripts/tt-deploy-ids.example.json); file is gitignored). **Update** it when you intentionally create a **new** web app deployment (new URL).
 
 ---
 
@@ -132,7 +134,7 @@ clasp-cc deploy -i <webAppDeploymentId> -V <newVersionNumber> -d "human-readable
 ```
 
 `<newVersionNumber>` is the number printed by `clasp-cc version`.  
-`<webAppDeploymentId>` is the **same** id as in `tt-deploy-ids.json` (keep the URL stable).
+`<webAppDeploymentId>` is the **same** id as in your local `tt-deploy-ids.json` (keep the URL stable).
 
 ### 6.4 Create new Apps Script projects in a Drive folder
 
@@ -143,6 +145,17 @@ clasp-cc create --title "…" --parentId <folderId> --rootDir src
 ```
 
 Restore / merge `filePushOrder` from backup, then `clasp-cc push`.
+
+---
+
+## 6b. Broker → Authenticator verify (production behavior)
+
+The broker calls the authenticator **`verify`** action over HTTP with:
+
+- **JSON body:** `{ "action": "verify", "code": "<challenge>", "internalSecret": "<AUTH_INTERNAL_SECRET>" }`
+- **Headers:** `X-Internal-Secret` (same value), and **`Authorization: Bearer <oauth>`** when the URL is `https://script.google.com/...` (matches consumer `TokenClient` behavior).
+
+The authenticator accepts the secret from **header** and/or **body** because published web apps may not pass custom headers through to `event.headers` reliably.
 
 ---
 
@@ -172,11 +185,17 @@ npm test
 
 ---
 
-## 9. Temporary wiring (`SetupTemp.js`)
+## 9. Initial Script Properties (no bootstrap files in repo)
 
-- **`SetupTemp.js`** in each project (`authenticator/`, `token-broker/`, `sample-caller/`) holds **pinned `/exec` URLs** and **`__EDIT_ME__` placeholders** for secrets. Edit in the Apps Script editor or locally, **Save**, **`clasp-cc push`**, then **Run → `runTtSetupAuthenticator` / `runTtSetupBroker` / `runTtSetupSampleCaller`** once each.  
-- **Do not** use `_ttSetup*(args)` from Run — Apps Script passes **no arguments**.  
-- Remove each `SetupTemp.js` and strip from `filePushOrder` when Script Properties are set. **Do not commit** files that contain real secrets.
+Secrets and URLs are **not** stored in git. For each Apps Script project, open **Project settings → Script properties** and set keys from **§4** (same values must match across authenticator, broker, and consumers as documented).
+
+- **URLs:** Build Web `/exec` URLs from your local [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json) (see [`scripts/tt-deploy-ids.example.json`](./scripts/tt-deploy-ids.example.json)):  
+  `https://script.google.com/macros/s/<authenticatorDeploymentId|tokenBrokerDeploymentId>/exec`  
+  Use **Web app** deployment ids, not API Executable ids, for `AUTHENTICATOR_BASE_URL` / `AUTHENTICATOR_URL` / `TOKEN_BROKER_URL` when using **webapp** transport.
+
+- **Generate secrets** outside the repo (password manager), paste into Script Properties only.
+
+- Optional smoke keys (`SMOKE_TEST_*`) are documented in `SmokeTest.js` headers — set only if you use Run-menu smoke tests.
 
 ---
 
@@ -188,14 +207,16 @@ All three projects expose metadata (service id, `scriptId`, auth status, declare
 
 ## 11. Lessons learned (keep these)
 
-1. **Versioned deployments, not HEAD** — Production callers must use the **deployment id** and **version** (`clasp deploy -i … -V …`). Editor “latest” is not what `/exec` runs until you redeploy.  
-2. **CC domain access** — Use **`webapp.access`: `DOMAIN`**, not `ANYONE_ANONYMOUS`, when the requirement is Workspace-only.  
-3. **Web app vs API executable** — **`webapp`** in the manifest + **Deploy as Web app** = `/exec`. **`executionApi`** in the manifest encourages **API executable** flows and `clasp run`; we removed it to keep ops simple.  
-4. **`clasp create` + existing `.clasp.json`** — Rename or move `.clasp.json` first, then create, then merge `filePushOrder`.  
-5. **Timezone** — Changing `timeZone` requires a **new version + redeploy** for web apps if you want `/exec` behavior aligned with the manifest snapshot.  
-6. **Tests** — GAS code uses UMD `})(this, …)`; Node tests use **vm** + fakes, not `globalThis` for project code.
-7. **Setup from Run menu** — Use **`runTtSetup*`** in **`SetupTemp.js`** with literals at the top of the file, not `_ttSetup*(args)` — Apps Script passes no arguments.
-8. **`DOMAIN` access breaks `UrlFetchApp`** — `UrlFetchApp.fetch()` is unauthenticated; `DOMAIN`-restricted web apps redirect it to a Google sign-in page, which returns HTML. `JSON.parse()` throws `Response was not JSON`. Use `ANYONE_ANONYMOUS` — the system's own secrets (`CALLER_SECRET`, `AUTH_INTERNAL_SECRET`) are the auth layer.
+1. **Versioned deployments, not HEAD** — Production callers must use the **deployment id** and **version** (`clasp deploy -i …`). Editor “latest” is not what `/exec` runs until you redeploy.  
+2. **Web app URL vs Execution API URL** — **`https://script.google.com/macros/s/<id>/exec`** is the **Web app**. **`https://script.googleapis.com/v1/scripts/<id>:run`** is the **Execution API**. They use different JSON shapes; putting the API URL in `AUTHENTICATOR_BASE_URL` or `AUTHENTICATOR_URL` (webapp mode) causes 401/400. See [`CONTEXT.md`](./CONTEXT.md).  
+3. **Verify uses body + header** — For broker→authenticator verify, send **`internalSecret` in the JSON body** as well as `X-Internal-Secret`; Google may not surface custom headers on `event.headers` for published web apps.  
+4. **Challenge codes are single-use** — After a successful verify, that code is removed from cache; smoke tests must issue **two** codes if testing two verify styles.  
+5. **Web app vs API executable** — Deploy **Web app** for `/exec` JSON. **API Executable** is optional for `issueCode` / `getNamedTokens` via `clasp run` or `TokenClient` `script_api` transport.  
+6. **`clasp create` + existing `.clasp.json`** — Rename or move `.clasp.json` first, then create, then merge `filePushOrder`.  
+7. **Timezone** — Changing `timeZone` requires a **new version + redeploy** for web apps if you want `/exec` behavior aligned with the manifest snapshot.  
+8. **Tests** — GAS code uses UMD `})(this, …)`; Node tests use **vm** + fakes + [`tests/fixtures/opsProperties.js`](./tests/fixtures/opsProperties.js).  
+9. **Script Properties** — Set keys in the Apps Script UI per §4/§9; do not embed production secrets in clasp-pushed files.  
+10. **`webapp.access` vs `UrlFetchApp`** — If **`DOMAIN`** (or similar) causes **HTML sign-in** responses to **script-to-script** `UrlFetchApp` calls, JSON parsing fails. Prefer **`ANYONE_ANONYMOUS`** for endpoints that must be called by other scripts without a browser cookie; **authorization is the app’s own secrets** (`CALLER_SECRET`, `internalSecret`), not Google’s web app gate. If you must keep `DOMAIN`, validate with real `UrlFetch` from broker/consumer.
 
 ---
 
@@ -204,10 +225,11 @@ All three projects expose metadata (service id, `scriptId`, auth status, declare
 | Symptom | Check |
 |---------|--------|
 | `/exec` still runs old code | Did you **`version` + `deploy -i`** after `push`? |
-| Script properties **keys** exist but **values empty** | You ran a **parameterized** `_ttSetup*(arg)` from Run — use **`SetupTemp.js`** with `__EDIT_ME__` replaced at the top (see §9). |
+| Script properties **keys** exist but **values empty** | Values were never saved — re-enter in **Project settings → Script properties** (see §4). |
 | `Error: Response was not JSON` + Google Drive HTML in the error | `appsscript.json` has `access: DOMAIN` — `UrlFetchApp` is unauthenticated, gets redirected to a sign-in page. Fix: set `access: ANYONE_ANONYMOUS` in both Authenticator and broker manifests, then push + version + redeploy. |
 | 403 / access denied on `/exec` from a browser | Expected if someone tries to open the URL in a browser without a Google account — not a problem for script-to-script calls. |
-| `clasp run` fails | We do not rely on it; use web app + paste properties or IDE Run on `SetupTemp`. |
+| `clasp run` fails (“API executable”) | Deploy a row as **API Executable** in Manage deployments, or use web `/exec` only. |
+| Wrong deployment id in local `tt-deploy-ids.json` | Web app id and API Executable id differ; update file when you create new deployments. |
 | `clasp create` says “Project file already exists” | Move `.clasp.json` aside first. |
 
 ---
@@ -217,10 +239,11 @@ All three projects expose metadata (service id, `scriptId`, auth status, declare
 | File | Contents |
 |------|----------|
 | [`README.md`](./README.md) | Short overview + links |
-| [`AGENTS.md`](./AGENTS.md) | Agent rules: `main.js`, UMD, deploy rules, do-not list |
-| [`SPEC.md`](./SPEC.md) | Minimal product / test spec |
-| **`OPERATIONS.md`** (this file) | Context, procedures, lessons learned |
-| [`tests/`](./tests/) | Jest entry points and `vm-fakes` |
+| [`AGENTS.md`](./AGENTS.md) | Agent rules: `main.js`, UMD, deploy, consumer output |
+| [`SPEC.md`](./SPEC.md) | HTTP contracts, transports, test spec |
+| [`CONTEXT.md`](./CONTEXT.md) | Timeline, mistakes, lessons (narrative) |
+| **`OPERATIONS.md`** (this file) | CC context, procedures, troubleshooting |
+| [`tests/`](./tests/) | Jest, `vm-fakes`, [`fixtures/opsProperties.js`](./tests/fixtures/opsProperties.js) |
 
 ---
 

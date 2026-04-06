@@ -104,18 +104,9 @@ When the Broker couldn't find a requested token name in Script Properties, it ad
 
 ---
 
-### 5. `SetupTemp.js` footgun ✅ Fixed
-**File:** `.gitignore`
+### 5. `SetupTemp.js` removed ✅ (2026-04)
 
-`SetupTemp.js` files are one-off bootstrappers that set Script Properties on fresh deployments. They were present in the repo but not gitignored. If someone pushed without deleting them, those `_ttSetup*` functions would be live in the deployed script.
-
-**Fix:** Added `**/SetupTemp.js` to `.gitignore`.
-
-**Tradeoff to be aware of:** Gitignoring these files improves push safety but removes them from version control — a new developer cloning the repo won't see the bootstrap helpers and will have to reconstruct them from `AGENTS.md`. The alternatives that were considered:
-- **Keep in repo, exclude from `filePushOrder`** — bootstrap is visible, but requires discipline to keep it out of `filePushOrder` and relies on knowing that GAS only pushes files listed there.
-- **Pre-push check** — a git hook that rejects pushes if `SetupTemp.js` is in any `filePushOrder` — more robust but more setup.
-
-The gitignore approach was chosen because the bootstrap procedure is fully documented in `AGENTS.md` and the risk of accidentally deploying a setup helper outweighs the reproducibility cost. If you need to re-bootstrap, follow `AGENTS.md` — don't rely on the file being in the repo.
+Bootstrap files are **not** in the repo. Initial setup: **Script Properties** in each Apps Script project per `OPERATIONS.md` §4 and §9. **`**/SetupTemp.js`** remains in `.gitignore` to block accidental reintroduction of local-only bootstrappers.
 
 ---
 
@@ -125,7 +116,7 @@ The gitignore approach was chosen because the bootstrap procedure is fully docum
 The Broker sends `X-Internal-Secret: <secret>` to the Authenticator on every verify call. No mutual TLS, no request signing with nonce/timestamp available in GAS. The security model is: **the wire is trusted.** Acceptable for internal tooling — keep both service URLs private and do not log them.
 
 ### Single point of failure
-Both the Authenticator and Broker must be deployed and live. If either goes down (GAS quota exceeded, auth expired on `theoracle@cairoconfessions.com`, accidental HEAD-only push), all consumers break simultaneously. `TokenClient.js` has no retry or circuit breaker. This is a known operational risk — monitor `theoracle` account health and keep deployment IDs in `scripts/tt-deploy-ids.json` up to date.
+Both the Authenticator and Broker must be deployed and live. If either goes down (GAS quota exceeded, auth expired on `theoracle@cairoconfessions.com`, accidental HEAD-only push), all consumers break simultaneously. `TokenClient.js` has no retry or circuit breaker. This is a known operational risk — monitor `theoracle` account health and keep deployment IDs in local `scripts/tt-deploy-ids.json` (from `tt-deploy-ids.example.json`) up to date.
 
 ---
 
@@ -138,7 +129,7 @@ Both the Authenticator and Broker must be deployed and live. If either goes down
 | `authenticator/src/AuthApp.js` | Add `checkIssueRateLimit(cache)`, `checkCallerSecret(headers)`; refactor `routeIssue(event)` to accept event; pass cache down to `issueNewCode(cache)` |
 | `sample-caller/src/TokenClient.js` | Add `PROP_CALLER_SECRET`; read and forward `X-Caller-Secret` header on `/issue`; `postJson` accepts optional `extraHeaders` |
 | `token-broker/src/BrokerApp.js` | `runExchange`: return `ok:false` + `missing[]` when any token name is not found; `handlePost`: forward `missing` in error response |
-| `.gitignore` | Add `**/SetupTemp.js` |
+| `.gitignore` | Ignore `**/SetupTemp.js` (optional local bootstrap only) |
 | `tests/authenticator.gas.test.js` | Add `CALLER_SECRET` to props; add `X-Caller-Secret` header to all issue events; add `issue rejects unauthorized caller` test |
 | `tests/token-broker.gas.test.js` | Update missing-keys test to assert `ok: false` and `missing` in response |
 
@@ -154,6 +145,6 @@ Both the Authenticator and Broker must be deployed and live. If either goes down
 - [ ] `clasp-cc push` → version + deploy on **Token Broker**
 - [ ] **`CALLER_SECRET` (required for hardening):** **Set `CALLER_SECRET=<shared-value>` in the Authenticator’s Script Properties** — until this is set, `/issue` remains open within your `DOMAIN` web app ACL
 - [ ] **`CALLER_SECRET` (consumers):** **Set the same `CALLER_SECRET=<shared-value>` in every consumer project’s Script Properties** — otherwise issue calls from `TokenClient` will fail once the Authenticator enforces the header
-- [ ] Delete `SetupTemp.js` from all three project `src/` folders if still present; remove from `filePushOrder` in each `.clasp.json`
+- [x] `SetupTemp.js` removed from all three projects; stripped from `.clasp.json` `filePushOrder`.
 - [ ] Verify `runSample()` still works end-to-end after redeploy
 - [ ] If any existing consumer used best-effort token fetching (requested names it knew might be missing), update it to handle `ok: false` + inspect `missing[]`

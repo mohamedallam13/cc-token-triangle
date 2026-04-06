@@ -131,6 +131,44 @@ describe('Authenticator (GAS fakes + vm sandbox)', () => {
     expect(second.valid).toBeFalsy();
   });
 
+  test('verify rejects unknown or never-issued code', () => {
+    const verifyEvent = {
+      postData: {
+        contents: JSON.stringify({
+          action: 'verify',
+          code: '00000000000000000000000000000000',
+        }),
+      },
+      headers: {
+        'X-Internal-Secret': 'test-internal',
+      },
+    };
+    const json = readTextOutput(sandbox.doPost(verifyEvent));
+    expect(json.valid).toBe(false);
+  });
+
+  test('verify accepts internalSecret in JSON body when headers are empty (web app)', () => {
+    const issueEvent = {
+      postData: {
+        contents: JSON.stringify({ action: 'issue' }),
+      },
+      headers: { 'X-Caller-Secret': 'test-caller' },
+    };
+    const issued = readTextOutput(sandbox.doPost(issueEvent));
+    const verifyEvent = {
+      postData: {
+        contents: JSON.stringify({
+          action: 'verify',
+          code: issued.code,
+          internalSecret: 'test-internal',
+        }),
+      },
+      headers: {},
+    };
+    const verifyJson = readTextOutput(sandbox.doPost(verifyEvent));
+    expect(verifyJson.valid).toBe(true);
+  });
+
   test('verify rejects wrong secret', () => {
     const issueEvent = {
       postData: {
@@ -152,5 +190,50 @@ describe('Authenticator (GAS fakes + vm sandbox)', () => {
     };
     const json = readTextOutput(sandbox.doPost(verifyEvent));
     expect(json.valid).toBe(false);
+  });
+
+  test('POST unknown action returns error', () => {
+    const json = readTextOutput(
+      sandbox.doPost({
+        postData: {
+          contents: JSON.stringify({ action: 'not-a-real-action' }),
+        },
+        headers: {},
+      })
+    );
+    expect(json.error).toMatch(/Unknown or missing action/);
+  });
+
+  test('doGet without action returns service heartbeat JSON', () => {
+    const json = readTextOutput(sandbox.doGet({ parameter: {} }));
+    expect(json.ok).toBe(true);
+    expect(json.service).toBe('cc-token-triangle-authenticator');
+  });
+
+  test('issue POST respects rate limit after bucket is saturated', () => {
+    const bucket = Math.floor(Date.now() / 60000);
+    sandbox.CacheService.getScriptCache().put('cct_issue_rate:' + bucket, '30', 120);
+    const json = readTextOutput(
+      sandbox.doPost({
+        postData: {
+          contents: JSON.stringify({ action: 'issue' }),
+        },
+        headers: { 'X-Caller-Secret': 'test-caller' },
+      })
+    );
+    expect(json.ok).toBe(false);
+    expect(String(json.error)).toMatch(/Too many requests/);
+  });
+
+  test('issueCode throws when rate limit bucket is saturated', () => {
+    const local = {};
+    installAuthenticatorGasFakes(local, {
+      AUTH_INTERNAL_SECRET: 'test-internal',
+      CALLER_SECRET: 'test-caller',
+    });
+    runFilesInSandbox(local, authenticatorChain(AUTH_ROOT));
+    const bucket = Math.floor(Date.now() / 60000);
+    local.CacheService.getScriptCache().put('cct_issue_rate:' + bucket, '30', 120);
+    expect(() => local.issueCode()).toThrow(/Too many requests/);
   });
 });

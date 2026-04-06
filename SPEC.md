@@ -1,26 +1,83 @@
 # Token Triangle — SPEC
 
-**Full operations guide:** [`OPERATIONS.md`](./OPERATIONS.md).
+**Operations & procedures:** [`OPERATIONS.md`](./OPERATIONS.md) · **Context & timeline:** [`CONTEXT.md`](./CONTEXT.md) · **Agent rules:** [`AGENTS.md`](./AGENTS.md)
+
+---
 
 ## Purpose
 
-Named secrets via **short-lived codes** + **Token broker** Script Properties (`TOKEN_<NAME>`).
+Allow **consumer** Google Apps Script projects to retrieve **named external secrets** (e.g. `TOKEN_DEMO`) from a **token broker** without storing those secrets in every project. Access is gated by:
 
-## Projects
+1. **Issue** — consumer obtains a **short-lived challenge code** from the **authenticator** (protected by `CALLER_SECRET` on issue).
+2. **Exchange** — consumer sends that code to the **broker**; the broker **verifies** the code with the authenticator (using **`AUTH_INTERNAL_SECRET`**) and returns **token values** from broker Script Properties (`TOKEN_<NAME>`).
 
-| Folder | Deploy as web app | Global entry points |
-|--------|-------------------|---------------------|
-| `authenticator/` | Yes | `doGet`, `doPost` in `main.js` |
-| `token-broker/` | Yes | `doGet`, `doPost` in `main.js` |
-| `sample-caller/` | Optional | `getPermission()`, `runSample()` in `main.js` + `TokenClient.js` module |
+---
 
-**Live URLs:** web apps use **pinned deployment versions** (`version` + `deploy -i`), not `@HEAD` — see `AGENTS.md`.
+## Components
 
-## Consumer copy
+| Project | Responsibility | Typical deployment |
+|---------|------------------|--------------------|
+| **authenticator** | Issue codes (cache TTL); verify codes (one-time consume) | **Web app** `/exec` + optional **API Executable** for `issueCode` |
+| **token-broker** | `UrlFetch` verify → authenticator; return `TOKEN_*` keys | **Web app** `/exec` + optional **API Executable** for `getNamedTokens` |
+| **sample-caller** | Reference **`TokenClient.js`** + `runSample()` | Optional; not in production request path |
 
-Single file: **`sample-caller/src/TokenClient.js`** → paste into any GAS project that needs tokens.
+---
 
-## Test strategy
+## HTTP contracts (Web app `/exec`)
 
-- Pure: `Utils` via `require`.
-- GAS-shaped: bootstrap `@mcpher/gas-fakes`, then `vm` sandbox + `tests/vm-fakes/` (Properties/Cache/UrlFetch stubs); **must** assert global `doGet` / `doPost` (and `getPermission` / `runSample` for sample) exist.
+### Authenticator `POST` JSON
+
+| `action` | Body | Headers | Response |
+|----------|------|---------|----------|
+| `issue` | `{ "action": "issue" }` | `X-Caller-Secret: <CALLER_SECRET>` (if configured) | `{ "code", "expiresInSeconds" }` |
+| `verify` | `{ "action": "verify", "code": "<uuid>", "internalSecret": "<secret>" }` | `X-Internal-Secret` optional (same value) | `{ "valid": true }` or `{ "valid": false, "error": "…" }` |
+
+**Note:** `internalSecret` in the body is **required in practice** for verify when the runtime does not pass custom headers through to `event.headers`.
+
+### Token broker `POST` JSON
+
+| `action` | Body | Response |
+|----------|------|----------|
+| `getToken` | `{ "action": "getToken", "code": "<challenge>", "names": ["DEMO", …] }` | `{ "ok": true, "tokens": { … }, "missing": [] }` or `{ "ok": false, "error": "…", "missing": […] }` |
+
+---
+
+## Consumer module output (`TOKEN_CLIENT.fetchNamedTokens`)
+
+Returned object:
+
+```json
+{
+  "httpIssue": 200,
+  "httpBroker": 200,
+  "issued": { "expiresInSeconds": 60 },
+  "broker": { "ok": true, "tokens": { "DEMO": "…" }, "missing": [] }
+}
+```
+
+On failure, `broker` may contain `{ "ok": false, "error": "…" }` or an error-shaped JSON from the broker.
+
+---
+
+## Transports (`TokenClient.js`)
+
+| Property | Values |
+|----------|--------|
+| `AUTHENTICATOR_TRANSPORT` / `TOKEN_BROKER_TRANSPORT` | `webapp` or `script_api` |
+| `AUTHENTICATOR_URL` / `TOKEN_BROKER_URL` | **webapp:** `https://script.google.com/macros/s/…/exec` · **script_api:** full `:run` URL or bare API Executable id |
+
+**webapp** URLs must **not** be `script.googleapis.com` — the client throws before UrlFetch.
+
+---
+
+## Local tests
+
+- **Root:** `npm test` (Jest + `vm` + `@mcpher/gas-fakes`).
+- **Fixtures:** `tests/fixtures/opsProperties.js` — canonical property maps aligned with operations.
+- **Recording:** `createRecordingUrlFetchApp` — asserts URL, headers, and JSON payload (verify includes `internalSecret`).
+
+---
+
+## IDs file
+
+Local [`scripts/tt-deploy-ids.json`](./scripts/tt-deploy-ids.json) (from [`scripts/tt-deploy-ids.example.json`](./scripts/tt-deploy-ids.example.json)) — script project ids, **Web** deployment ids (`/exec`), **API Executable** ids (`:run`). Update when deployments change intentionally.

@@ -116,8 +116,13 @@
     };
   }
   function routeVerify(event, body) {
-    const headerSecret = AUTH_UTILS.extractInternalSecret(event.headers);
-    const result = verifyAndConsume(body.code, headerSecret);
+    const headerSecret = AUTH_UTILS.extractInternalSecretHeaderOnly(event.headers);
+    const bodySecret =
+      body && body.internalSecret != null && String(body.internalSecret) !== ''
+        ? String(body.internalSecret)
+        : '';
+    const effective = headerSecret || bodySecret;
+    const result = verifyAndConsume(body.code, effective);
     if (!result.ok) {
       return { body: { valid: false, error: result.error } };
     }

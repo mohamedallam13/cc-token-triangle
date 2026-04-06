@@ -99,18 +99,52 @@
     if (!verifyUrl) {
       return { ok: false, error: 'AUTHENTICATOR_BASE_URL is empty' };
     }
+    if (/script\.googleapis\.com/i.test(verifyUrl)) {
+      return {
+        ok: false,
+        error:
+          'AUTHENTICATOR_BASE_URL must be the Web app /exec URL (https://script.google.com/macros/s/…/exec), not the Apps Script API :run URL (script.googleapis.com). The broker uses HTTP {action:verify} to the web deployment, not the Execution API.',
+      };
+    }
     return { ok: true, verifyUrl: verifyUrl, secret: secret };
   }
+  function asPlainErrorString(raw) {
+    if (raw == null) {
+      return '';
+    }
+    if (typeof raw === 'string') {
+      return raw;
+    }
+    try {
+      return JSON.stringify(raw);
+    } catch (stringifyError) {
+      return String(raw);
+    }
+  }
+
   function fetchVerifyOutcome(verifyUrl, code, secret) {
-    const payload = JSON.stringify({ action: 'verify', code: String(code || '') });
-    return UrlFetchApp.fetch(verifyUrl, {
+    const url = String(verifyUrl).trim();
+    const headers = {
+      'X-Internal-Secret': secret,
+    };
+    if (/^https:\/\/script\.google\.com\//i.test(url)) {
+      try {
+        headers.Authorization = 'Bearer ' + ScriptApp.getOAuthToken();
+      } catch (oauthErr) {
+        /* caller may run without OAuth; body.internalSecret still works */
+      }
+    }
+    const payload = JSON.stringify({
+      action: 'verify',
+      code: String(code || ''),
+      internalSecret: secret,
+    });
+    return UrlFetchApp.fetch(url, {
       method: 'post',
       contentType: 'application/json',
       muteHttpExceptions: true,
       payload: payload,
-      headers: {
-        'X-Internal-Secret': secret,
-      },
+      headers: headers,
     });
   }
   function outcomeFromVerifyResponse(res) {
@@ -123,9 +157,14 @@
       return { ok: false, error: 'Authenticator returned non-JSON' };
     }
     if (httpCode >= 400 || !data.valid) {
+      const rawErr = data && data.error;
+      const errText =
+        rawErr != null && rawErr !== ''
+          ? asPlainErrorString(rawErr)
+          : 'Code verification failed';
       return {
         ok: false,
-        error: (data && data.error) || 'Code verification failed',
+        error: errText,
       };
     }
     return { ok: true };
@@ -160,7 +199,11 @@
   function handleExecGetTokens(code, names) {
     const result = runExchange(String(code || ''), Array.isArray(names) ? names : []);
     if (!result.ok) {
-      throw new Error(result.error || 'Token exchange failed');
+      const message =
+        result.error != null && result.error !== ''
+          ? asPlainErrorString(result.error)
+          : 'Token exchange failed';
+      throw new Error(message);
     }
     return { ok: true, tokens: result.tokens, missing: result.missing || [] };
   }

@@ -30,4 +30,15 @@ describe('AUTH_UTILS (pure)', () => {
     });
     expect(secret).toBe('tokenvalue');
   });
+
+  test('extractInternalSecretHeaderOnly ignores Bearer (verify uses body fallback)', () => {
+    expect(
+      AUTH_UTILS.extractInternalSecretHeaderOnly({ 'X-Internal-Secret': 'h' })
+    ).toBe('h');
+    expect(
+      AUTH_UTILS.extractInternalSecretHeaderOnly({
+        Authorization: 'Bearer oauth',
+      })
+    ).toBe('');
+  });
 });

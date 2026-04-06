@@ -1,4 +1,6 @@
 node_modules/
 scripts/generated/
-# SetupTemp is a one-off bootstrapper — must be removed after setup, never committed to production
+# Never re-add one-off bootstrap files with real secrets
 **/SetupTemp.js
+# Local deployment ids (copy from scripts/tt-deploy-ids.example.json)
+scripts/tt-deploy-ids.json

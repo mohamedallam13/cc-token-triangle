@@ -47,6 +47,16 @@
     }
     return '';
   }
+  /** Web app /exec often omits custom headers on event.headers — verify route uses this + body.internalSecret */
+  function extractInternalSecretHeaderOnly(headers) {
+    const headerMap = headers || {};
+    const lower = {};
+    Object.keys(headerMap).forEach(function (key) {
+      lower[String(key).toLowerCase()] = headerMap[key];
+    });
+    const direct = lower['x-internal-secret'];
+    return direct ? String(direct) : '';
+  }
   function extractCallerSecret(headers) {
     const headerMap = headers || {};
     const lower = {};
@@ -63,6 +73,7 @@
     secretHeaderOutcome,
     parseJsonContents,
     extractInternalSecret,
+    extractInternalSecretHeaderOnly,
     extractCallerSecret,
   };
 });

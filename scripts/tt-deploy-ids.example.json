@@ -1,0 +1,12 @@
+{
+  "authenticatorScriptId": "",
+  "tokenBrokerScriptId": "",
+  "sampleCallerScriptId": "",
+  "authenticatorDeploymentId": "",
+  "tokenBrokerDeploymentId": "",
+  "authenticatorApiExecutableDeploymentId": "",
+  "tokenBrokerApiExecutableDeploymentId": "",
+  "note": "Copy this file to tt-deploy-ids.json (gitignored) and fill from Apps Script → Project settings / Manage deployments. Do not commit real ids to public forks.",
+  "noteTokenBrokerDeployments": "tokenBrokerDeploymentId and tokenBrokerApiExecutableDeploymentId may match when one deployment is API-executable and Web.",
+  "noteApiExecutable": "API URL: https://script.googleapis.com/v1/scripts/{API_EXECUTABLE_DEPLOYMENT_ID}:run — must be the API Executable row, not the script project id."
+}
