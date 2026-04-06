@@ -60,6 +60,7 @@ describe('Sample caller — client flow (TOKEN_CLIENT + props)', () => {
     expect(calls[0].url).toBe(OPS.AUTHENTICATOR_WEB_EXEC);
     const issueBody = JSON.parse(calls[0].payload);
     expect(issueBody.action).toBe('issue');
+    expect(issueBody.callerSecret).toBe(OPS.CALLER_SECRET);
     expect(calls[0].headers['X-Caller-Secret']).toBe(OPS.CALLER_SECRET);
     expect(String(calls[0].headers.Authorization || '')).toMatch(/^Bearer /);
     expect(calls[1].url).toBe(OPS.BROKER_WEB_EXEC);

@@ -97,9 +97,13 @@
       return JSON.stringify({ ok: false, message: wrong });
     }
 
-    var issueRes = postToExec(authUrl, { action: 'issue' }, {
-      'X-Caller-Secret': caller,
-    });
+    var issueRes = postToExec(
+      authUrl,
+      { action: 'issue', callerSecret: caller },
+      {
+        'X-Caller-Secret': caller,
+      }
+    );
     var issueHttp = issueRes.getResponseCode();
     var issueText = issueRes.getContentText() || '{}';
     console.log('[BROKER_SMOKE] auth issue HTTP', issueHttp, issueText.substring(0, 500));
@@ -177,7 +181,11 @@
       return JSON.stringify({ ok: false, message: bad });
     }
 
-    var issueRes = postToExec(authUrl, { action: 'issue' }, { 'X-Caller-Secret': caller });
+    var issueRes = postToExec(
+      authUrl,
+      { action: 'issue', callerSecret: caller },
+      { 'X-Caller-Secret': caller }
+    );
     console.log('[BROKER_SMOKE] e2e issue HTTP', issueRes.getResponseCode());
     var issued = JSON.parse(issueRes.getContentText() || '{}');
     if (!issued.code) {

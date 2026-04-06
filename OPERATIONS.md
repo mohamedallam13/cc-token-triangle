@@ -80,7 +80,7 @@ The **`apps/`** folder groups the three clasp roots so they are not mixed with `
 | Project | Property | Meaning |
 |---------|----------|---------|
 | **Authenticator** | `AUTH_INTERNAL_SECRET` | Shared secret; broker sends it when verifying; must match broker. |
-| **Authenticator** | `CALLER_SECRET` | Same value as on consumers — required for `/issue` (header `X-Caller-Secret`). |
+| **Authenticator** | `CALLER_SECRET` | Same value as on consumers — required for `/issue`. Send **`X-Caller-Secret`** and/or **`callerSecret` in JSON body** (Web apps often drop custom headers; body mirrors verify + `internalSecret`). |
 | **Token broker** | `AUTHENTICATOR_BASE_URL` | Full Authenticator **web app** URL ending in `/exec` — **never** `script.googleapis.com/...:run`. |
 | **Token broker** | `AUTH_INTERNAL_SECRET` | Same value as on Authenticator. |
 | **Token broker** | `TOKEN_<NAME>` | Secret value for logical name `<NAME>` (e.g. `TOKEN_DEMO`). |

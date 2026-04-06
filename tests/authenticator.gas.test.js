@@ -83,6 +83,21 @@ describe('Authenticator (GAS fakes + vm sandbox)', () => {
     expect(json.code).toBeUndefined();
   });
 
+  test('issue accepts callerSecret in body when headers empty (web app behavior)', () => {
+    const event = {
+      postData: {
+        contents: JSON.stringify({
+          action: 'issue',
+          callerSecret: 'test-caller',
+        }),
+      },
+      headers: {},
+    };
+    const json = readTextOutput(sandbox.doPost(event));
+    expect(json.code).toBeDefined();
+    expect(json.expiresInSeconds).toBeGreaterThan(0);
+  });
+
   test('verify consumes a valid code', () => {
     const issueEvent = {
       postData: {

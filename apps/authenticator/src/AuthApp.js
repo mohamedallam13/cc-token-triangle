@@ -19,7 +19,7 @@
         return jsonOutput(getPermissionPayload());
       }
       if (action === 'issue') {
-        return jsonOutput(routeIssue(event).body);
+        return jsonOutput(routeIssue(event, body).body);
       }
       if (action === 'verify') {
         return jsonOutput(routeVerify(event, body).body);
@@ -67,12 +67,24 @@
     cache.put(key, String(current + 1), 120);
     return { ok: true };
   }
-  function checkCallerSecret(headers) {
+  /**
+   * Web app /exec often omits custom headers on event.headers — same as verify + internalSecret in body.
+   * Prefer header X-Caller-Secret; fallback body.callerSecret when present.
+   */
+  function checkCallerSecret(headers, body) {
     const expected = AUTH_ENV.getCallerSecret();
     if (!expected) {
       return { ok: true }; // not configured — skip check (backward compatible)
     }
-    const provided = AUTH_UTILS.extractCallerSecret(headers);
+    let provided = AUTH_UTILS.extractCallerSecret(headers);
+    if (
+      !provided &&
+      body &&
+      body.callerSecret != null &&
+      String(body.callerSecret) !== ''
+    ) {
+      provided = String(body.callerSecret);
+    }
     if (!provided || provided !== expected) {
       return { ok: false, error: 'Unauthorized' };
     }
@@ -97,13 +109,13 @@
     cache.remove(key);
     return { ok: true };
   }
-  function routeIssue(event) {
+  function routeIssue(event, body) {
     const cache = CacheService.getScriptCache();
     const rateCheck = checkIssueRateLimit(cache);
     if (!rateCheck.ok) {
       return { body: { ok: false, error: rateCheck.error } };
     }
-    const secretCheck = checkCallerSecret(event && event.headers);
+    const secretCheck = checkCallerSecret(event && event.headers, body);
     if (!secretCheck.ok) {
       return { body: { ok: false, error: secretCheck.error } };
     }

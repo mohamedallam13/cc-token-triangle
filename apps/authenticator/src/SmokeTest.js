@@ -46,9 +46,11 @@
       return JSON.stringify({ ok: false, message: msg });
     }
 
-    var issueHttp = postToExec(execUrl, { action: 'issue' }, {
-      'X-Caller-Secret': caller,
-    });
+    var issueHttp = postToExec(
+      execUrl,
+      { action: 'issue', callerSecret: caller },
+      { 'X-Caller-Secret': caller }
+    );
     var issueCode = issueHttp.getResponseCode();
     var issueText = issueHttp.getContentText() || '{}';
     console.log('[AUTH_SMOKE] issue response HTTP', issueCode, issueText.substring(0, 500));

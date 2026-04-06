@@ -204,9 +204,13 @@
 
     if (authenticatorTransport === 'webapp') {
       traceLog(verbose, 'step 3/5 — issue: POST JSON {action:issue} to authenticator /exec');
+      const issuePayload = { action: 'issue' };
+      if (callerSecret) {
+        issuePayload.callerSecret = callerSecret;
+      }
       const issueResponse = postJson(
         authenticatorEndpointRaw,
-        { action: 'issue' },
+        issuePayload,
         issueHeaders
       );
       httpIssue = issueResponse.httpCode;

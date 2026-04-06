@@ -31,10 +31,10 @@ In this repository the three clasp projects live under **`apps/`** (`apps/authen
 
 | `action` | Body | Headers | Response |
 |----------|------|---------|----------|
-| `issue` | `{ "action": "issue" }` | `X-Caller-Secret: <CALLER_SECRET>` (if configured) | `{ "code", "expiresInSeconds" }` |
+| `issue` | `{ "action": "issue" }` — add **`callerSecret`** in body when Web app omits headers | `X-Caller-Secret` (if configured) — body fallback same as verify | `{ "code", "expiresInSeconds" }` |
 | `verify` | `{ "action": "verify", "code": "<uuid>", "internalSecret": "<secret>" }` | `X-Internal-Secret` optional (same value) | `{ "valid": true }` or `{ "valid": false, "error": "…" }` |
 
-**Note:** `internalSecret` in the body is **required in practice** for verify when the runtime does not pass custom headers through to `event.headers`.
+**Note:** For **verify**, `internalSecret` in the body is **required in practice** when the runtime does not pass custom headers through to `event.headers`. For **issue**, send **`callerSecret` in the JSON body** as well as (or instead of) `X-Caller-Secret` for the same reason.
 
 ### Token broker `POST` JSON
 
