@@ -14,7 +14,7 @@ Three **standalone** Google Apps Script projects (`clasp` `rootDir: src` each):
 | `apps/token-broker/` | `UrlFetch` → authenticator verify; returns `TOKEN_<NAME>` from Script Properties | **Web app** + optional **API Executable** for `getNamedTokens` |
 | `apps/sample-caller/` | Reference **`TokenClient.js`** + `runSample()` | Optional — **not** required in production traffic |
 
-**Push with `clasp-cc`** (CC Apps Script account).
+**Push with `clasp-cc`** (CC Apps Script account — `clasp -A ~/.clasp/cc.clasprc.json`). From automation (npm scripts), use the repo wrapper **[`scripts/clasp-cc`](./scripts/clasp-cc)** so Node does not depend on shell aliases.
 
 ---
 

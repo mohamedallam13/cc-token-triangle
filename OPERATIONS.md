@@ -134,7 +134,7 @@ npm run redeploy:web -- "short description of change"
 # or: DEPLOY_MESSAGE="short description" npm run redeploy:web
 ```
 
-This runs `clasp push --force` → `clasp version` → `clasp deploy -i …` for **both** [`apps/authenticator/`](./apps/authenticator/) and [`apps/token-broker/`](./apps/token-broker/) using the same account as `~/.clasp/cc.clasprc.json` (override with `CLASP_AUTH` if needed). See [`scripts/redeploy-web-apps.mjs`](./scripts/redeploy-web-apps.mjs).
+This runs **`clasp-cc`**-equivalent commands via [`scripts/clasp-cc`](./scripts/clasp-cc): `push --force` → `version` → `deploy -i …` for **both** [`apps/authenticator/`](./apps/authenticator/) and [`apps/token-broker/`](./apps/token-broker/). Same account as `~/.clasp/cc.clasprc.json` (override with `CLASP_AUTH` if needed). See [`scripts/redeploy-web-apps.mjs`](./scripts/redeploy-web-apps.mjs).
 
 **Manual (same steps):**
 

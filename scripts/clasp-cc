@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Cairo Confessions clasp profile — same as shell alias:
+#   clasp-cc → clasp -A "$HOME/.clasp/cc.clasprc.json"
+# Use this wrapper from npm/node so scripts do not rely on interactive shell aliases.
+# Override auth file: CLASP_AUTH=/path/to/file ./scripts/clasp-cc push
+set -euo pipefail
+AUTH="${CLASP_AUTH:-$HOME/.clasp/cc.clasprc.json}"
+exec clasp -A "$AUTH" "$@"

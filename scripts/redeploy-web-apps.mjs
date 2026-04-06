@@ -7,8 +7,8 @@
  *   node scripts/redeploy-web-apps.mjs [version-message]
  *   DEPLOY_MESSAGE="fix issue" node scripts/redeploy-web-apps.mjs
  *
+ * Uses [`scripts/clasp-cc`](./clasp-cc) — same as interactive **`clasp-cc`** (CC account).
  * Env:
- *   CLASP — path to clasp binary (default: "clasp" on PATH)
  *   CLASP_AUTH — path to cc.clasprc.json (default: ~/.clasp/cc.clasprc.json)
  */
 
@@ -22,16 +22,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, '..');
 const idsPath = path.join(repoRoot, 'scripts', 'tt-deploy-ids.json');
 
-const CLASP = process.env.CLASP || 'clasp';
+/** Same invocation as shell alias clasp-cc; works from Node without loading .zshrc. */
+const CLASP_CC = path.join(__dirname, 'clasp-cc');
 const CLASP_AUTH =
   process.env.CLASP_AUTH || path.join(os.homedir(), '.clasp', 'cc.clasprc.json');
 
 function claspRun(cwd, args) {
-  const full = ['-A', CLASP_AUTH, ...args];
-  const r = spawnSync(CLASP, full, {
+  const r = spawnSync(CLASP_CC, args, {
     cwd,
     encoding: 'utf8',
-    env: process.env,
+    env: { ...process.env, CLASP_AUTH },
   });
   return {
     status: r.status,
@@ -111,6 +111,10 @@ function main() {
 
   if (!fs.existsSync(CLASP_AUTH)) {
     console.error(`[redeploy] Missing clasp auth file: ${CLASP_AUTH}`);
+    process.exit(1);
+  }
+  if (!fs.existsSync(CLASP_CC)) {
+    console.error(`[redeploy] Missing wrapper: ${CLASP_CC}`);
     process.exit(1);
   }
 
